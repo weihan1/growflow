@@ -1,7 +1,6 @@
 import os
 from PIL import Image
 import torch
-import torchvision.transforms.functional as tf
 from datasets.colmap import DynamicParser
 from datasets.colmap import Static_Dataset, Dynamic_Dataset, Dynamic_Datasetshared
 from configs.captured_config import Config
@@ -14,10 +13,7 @@ import json
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from helpers.mesh_utils import compute_chamfer_between_point_and_mesh
-from helpers.pc_viz_utils import visualize_point_cloud, animate_point_clouds_lst
-from helpers.plotting_utils import plot_metrics, plot_metrics_wo_chamfer
-from helpers.image_utils import visualize_tensor_error_map
+from helpers.plotting_utils import plot_metrics_wo_chamfer
 import subprocess
 from glob import glob
 import yaml
