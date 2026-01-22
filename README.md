@@ -1,0 +1,121 @@
+# Grow with the Flow: Modeling Plant Morphogenesis with 3D Gaussian Flow Fields
+
+**TL;DR: 4D reconstruction of plant growth from multi-view timelapse measurements using neural ODE.**
+
+**Full Abstract**:
+Modeling the time-varying 3D appearance of plants during their growth (or morphogenesis) poses unique challenges: unlike many dynamic scenes, plants generate new geometry over time as they expand, branch, and differentiate. Recent motion modeling techniques are ill-suited to this
+problem setting. For example, deformation fields cannot
+introduce new geometry, and 4D Gaussian splatting constrains motion to a linear trajectory in space and time and cannot track the same set of Gaussians over time. Here, we introduce a 3D Gaussian flow field representation that
+models plant morphogenesis as a time-varying derivative
+over Gaussian parameters—position, scale, orientation,
+color, and opacity—enabling nonlinear and continuous-
+time growth dynamics. To initialize a sufficient set of Gaussian primitives, we reconstruct the mature plant and learn
+a process of reverse morphogenesis, effectively simulating
+the plant’s developmental history in reverse. Our approach
+achieves superior image quality and geometric accuracy
+compared to prior methods multi-view timelapse datasets
+of plant growth, providing a new approach for appearance
+modeling of growing 3D structures.
+
+[Weihan Luo](https://weihan1.github.io/),
+[Lily Goli](https://lilygoli.github.io/),
+[Sherwin Bahmani](https://sherwinbahmani.github.io/),
+[Felix Taubner](https://felixtaubner.github.io/),
+[Andrea Tagliasacchi](https://theialab.ca/),
+[David Lindell](https://davidlindell.com/)
+
+
+## Installation
+
+1. Create a new conda environment (make sure miniconda3 is installed beforehand). We tested on python version 3.10.8
+```
+conda create -n env_name python=3.10.8
+conda activate env_name
+```
+2. Additionally please install PyTorch>=1.10 from (https://pytorch.org/get-started/previous-versions/).
+
+3. Install the requirements file with 
+
+```
+pip install -r requirements.txt
+```
+4. Clone the repository
+```
+git clone https://github.com/weihan1/growflow.git
+cd growflow/
+```
+
+
+## Dataset and checkpoints
+To download the dataset, run `bash download_data.sh`
+
+The dataset structure is 
+```
+├── captured
+│   ├── pi_corn_full_subset4
+│   └── pi_rose
+└── synthetic
+    ├── clematis_subsample_6
+    ├── plant_1_subsample_6
+    ├── plant_2_subsample_6
+    ├── plant_3_subsample_6
+    ├── plant_4_subsample_6
+    ├── plant_5_subsample_6
+    └── tulip_subsample_6
+```
+
+NOTE: the synthetic datasets are already subsampled with interpolation factor 6, whereas the captured datasets are not subsampled, so you need to manually set the `subsample_factor` argument (see the boundary reconstruction and global optimization stage).
+
+
+To download the checkpoints, run `bash download_checkpoints.sh`
+
+## Usage 
+### Training 
+Our model is trained in 3 stages (see sect. 3.3 of paper), the static reconstruction stage, the boundary reconstruction stage, and the global optimization stage. 
+
+#### Static reconstruction stage 
+**Synthetic:** `python main_blender.py default --data-dir <your_data_dir>`
+
+**Captured:** `python main_captured.py default --data-dir <your_data_dir>`
+
+#### Boundary reconstruction stage
+**Synthetic:** `python generate_trajectory.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_static_stage> --no-adjoint`
+
+**Captured:** `python generate_trajectory_captured.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_static_stage> --no-adjoint --subsample-factor <desired_subsample_factor>`
+
+#### Global optimization stage
+**Synthetic:** `python main_blender.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_static_stage> --full_trajectory_path <your_ckpt_from_boundary_stage> --rtol 1e-5 --atol 1e-6`
+
+**Captured:** `python main_captured.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_last_stage>  --unscaled-encoder-lr-init 5e-4 --subsample-factor <desired_subsample_factor>`
+
+### Evaluation
+**Synthetic:** `python full_render.py --data-dir <your_data_dir> --dynamic-ckpt <your_final_checkpoint_from_global>`
+
+**Captured:** `python full_render_captured.py --data-dir <your_data_dir> --dynamic-ckpt <your_final_checkpoint_from_global>`
+
+### Metrics 
+NOTE: You can only run the metrics code after running the eval code.
+
+**Synthetic:** `python metrics_interp.py --data-dir <your_data_dir> --skip-dynamic3dgs --skip-4dgs --skip-4dgaussians`
+
+**Captured:** `python metrics_captured.py --data-dir <your_data_dir> --skip-dynamic3dgs --skip-4dgs --skip-4dgaussians`
+
+
+## Tips for training on custom data
+- **Better reconstruction**. To improve reconstruction quality you want to have better initialization for the neural ODE in the global optimization stage. To that end, increase `static_max_steps` in the static reconstruction stage and also increase `min_iterations_req` in the boundary reconstruction stage. Furthermore feel free to lower the tolerances `rtol` or `atol` of the ode solver in the global optimization stage or boundary reconstruction stage.
+- **Use bounding box**. For all of our experiments, we hand-craft custom bounding boxes to constrain the neural ODE to only learn the the flow field of the foreground Gaussians. On your custom data, simply add the bounds of a bounding box that roughly includes the foreground plant.
+
+
+## Reproducing numbers
+Dowload the dataset and checkpoints and then run the metrics code.
+
+## Credits 
+This code is built on top of [gsplat](https://github.com/nerfstudio-project/gsplat) and [torchdiffeq](https://github.com/rtqichen/torchdiffeq). Thanks to the maintainers for their contribution to the community!
+
+
+## Citing
+
+If you find growflow helpful, please consider citing:
+
+```
+```
