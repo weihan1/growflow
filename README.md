@@ -47,7 +47,7 @@ cd growflow/
 
 
 ## Dataset and checkpoints
-To download the dataset, run `bash download_data.sh`
+To download the dataset, run `python download_data.py`
 
 The dataset structure is 
 ```
@@ -66,8 +66,7 @@ The dataset structure is
 
 NOTE: the synthetic datasets are already subsampled with interpolation factor 6, whereas the captured datasets are not subsampled, so you need to manually set the `subsample_factor` argument (see the boundary reconstruction and global optimization stage).
 
-
-To download the checkpoints, run `bash download_checkpoints.sh`
+To download the checkpoints, run `bash download_checkpoints.py`
 
 ## Usage 
 ### Training 
