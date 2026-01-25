@@ -67,6 +67,15 @@ The dataset structure is
 NOTE: the synthetic datasets are already subsampled with interpolation factor 6, whereas the captured datasets are not subsampled, so you need to manually set the `subsample_factor` argument (see the boundary reconstruction and global optimization stage).
 
 To download the checkpoints, run `bash download_checkpoints.py`
+The checkpoint structure is 
+```
+|-- ckpts
+|   |-- gaussian_ckpt_29999_t0.pt
+|   `-- neural_ode_29999.pt
+`-- fixed_pc_traj
+    `-- full_traj_{some_number}.npy
+```
+`neural_ode_29999.pt` is the final neural ODE checkpoint, where as `gaussian_ckpt_29999_t0.pt` and `full_traj_{some_number}.npy` are the cached Gaussians that you can use to directly train the neural ODE in the global optimization stage.
 
 ## Usage 
 ### Training 
