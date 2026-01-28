@@ -38,17 +38,6 @@ class Trainer(BaseEngine):
         wandb_run,
         device,
     ):
-        """
-        Main training class, handles static and dynamic training
-        Args:
-        -cfg: The config
-        -gaussians: the 3D gaussians
-        -dynamical_model: the dynamical model (neural ode)
-        -trainset: the training set
-        -paths: Dict of various paths
-        -evaluator: Evaluator to compute nvs results
-        -wandb_run: the wandb run for loggin
-        """
         super().__init__(cfg, gaussians, dynamical_model, model_list, model_index, trainset, testset,  paths, device)
         self.model_list = model_list
         self.model_index = model_index
@@ -1369,13 +1358,6 @@ class Trainer(BaseEngine):
         #placeholder variables
         inp_t = None
         pred_param_novel = None
-        # assert cfg.learn_masks, "need to have learned masks to use this code"
-        # assert "masks" in self.gaussians.splats, "need to have trained 3D masks to use this"
-        # print("3D masks detected, using them")
-        # masks_ind = torch.sigmoid(self.gaussians.splats["masks"])
-        # bounding_box_mask = (masks_ind > 0.5).squeeze()
-        # num_gauss_ode = bounding_box_mask.sum()
-        # print(f"out of {bounding_box_mask.shape[0]} gaussians, we train with {num_gauss_ode} gaussians")
 
         scene = cfg.data_dir.split("/")[-1]
         means_t0 = self.gaussians.splats.means
@@ -1417,11 +1399,6 @@ class Trainer(BaseEngine):
             rotation_angles = (0,0,0)
             
         _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
-        # else: #bounding box hasn't been created for that scene, resort to using masks
-        #     masks_ind = torch.sigmoid(self.gaussians.splats["masks"])
-        #     bounding_box_mask = (masks_ind > 0.5).squeeze()
-        #     num_gauss_ode = bounding_box_mask.sum()
-        #     print(f"out of {bounding_box_mask.shape[0]} gaussians, we train with {num_gauss_ode} gaussians")
             
         num_gauss_ode = bounding_box_mask.sum()
 
@@ -1569,13 +1546,12 @@ class Trainer(BaseEngine):
                 )
 
             # #run eval
-            # if step in [i - 1 for i in cfg.dynamic_eval_steps]:
-            #     try:
-            #         self.evaluator.dynamic_eval(fixed_initial_params, step)
-            #     except Exception as e:
-            #         print(f"encounter {e}, skipping eval")
+            if step in [i - 1 for i in cfg.dynamic_eval_steps]:
+                try:
+                    self.evaluator.dynamic_eval(fixed_initial_params, step)
+                except Exception as e:
+                    print(f"encounter {e}, skipping eval")
 
-            #TODO: fix viser viewer, so we can see stuff during training, do this at the end.
 
             # start_time = time.time()
             loss.backward()
@@ -1611,91 +1587,6 @@ class Trainer(BaseEngine):
         print("finished training")
         print(f"the timestep counter is {timestep_counter}")
 
-        
-
-    @torch.no_grad()
-    def visualize_renderings(self, fixed_initial_params, debug_raster_params, step, cfg, num_timesteps=35,path="debug_final", split="train", viz_reference=False):
-        """
-        Quickly visualize renderings of the neural ode trajectory for one camera.
-        Compute per timestep PSNR against gt
-        Plot PSNR against upper bound psnr. If upperbound doesn't exist, skip visualizing upper bound.
-        Visualize both first train or first test camera PSNR.
-        """
-        os.makedirs(path, exist_ok=True)
-        scene  = cfg.data_dir.split("/")[-1]
-        all_indices = list(range(0, num_timesteps))
-        psnr_ours_dict = defaultdict(list)
-        for split in ["train"]: 
-            if split == "train":
-                c2ws_all, gt_images_all, inp_t_all = self.trainset.getfirstcam(all_indices)  
-                inp_t_all = inp_t_all[1:] #getting rid of double 0
-            if split == "test":
-                c2ws_all, gt_images_all, inp_t_all = self.testset.getfirstcam(all_indices)  
-            # inp_t_all = torch.tensor([0., 0.1], device="cuda")
-            first_cam_gt_image = gt_images_all[0]
-            pred_param = self.dynamical_model(fixed_initial_params, inp_t_all) #(T, N_gaussians, feat_dim)
-            debug_raster_params["viewmats"] = c2ws_all.cuda() #we replace here since we need to use the test cameras.
-            debug_raster_params["Ks"] = debug_raster_params["Ks"][0,None]
-            colors, _ = self.gaussians.rasterize_with_dynamic_params_batched(pred_param, debug_raster_params, activate_params=True) 
-            first_img_ours = torch.clamp(colors[0], 0,1).cpu() #only visualize stuff from first camera.
-            first_img_upper = {}
-            if split == "train":
-                first_camera_indx = list(self.trainset.images.keys())[0]
-            else:
-                first_camera_indx = list(self.testset.images.keys())[0]
-            #2. Compute PSNR for our method.    
-            for t in range(num_timesteps):
-                gt_image_t = first_cam_gt_image[t]
-                ours_t = first_img_ours[t]
-                eval_pixels = torch.clamp(gt_image_t, 0.0, 1.0)
-                psnr_ours = round(_psnr(ours_t, eval_pixels).item(), 2)
-                psnr_ours_dict[split].append(psnr_ours) 
-
-            #saving our own psnr list so we can re-use it 
-            regular_psnr_ours_dict = dict(psnr_ours_dict)
-            with open('my_data.json', 'w') as f:
-                json.dump(regular_psnr_ours_dict, f)
-            #3. Visualize PSNR over time on same graph
-            fig, ax = plt.subplots(figsize=(12, 8))
-            
-            methods = ["ours"] 
-            data_lists = [psnr_ours_dict[split]]
-            colors = sns.color_palette("husl", len(methods))
-            for i, (method, data) in enumerate(zip(methods, data_lists)):
-                timesteps = range(0, len(data))
-                ax.plot(timesteps, data, '-', label=method, linewidth=2, color=colors[i])
-            if split == "train":
-                ax.set_ylim(0, 50)  # Fixed PSNR range from 0 to 35 dB
-            else:
-                ax.set_ylim(0, 50)  # Fixed PSNR range from 0 to 35 dB
-            ax.set_xlim(0, num_timesteps-1)
-            if num_timesteps > 50: #if there's too many timesteps, reduce the numb ofticks
-                ax.set_xticks(range(0, num_timesteps + 1, int(num_timesteps/35)))
-            else:
-                ax.set_xticks(range(0, num_timesteps + 1))
-            ax.set_xlabel('Timestep', fontsize=14)
-            ax.set_ylabel('PSNR (dB)', fontsize=14)
-            ax.set_title(f'Peak Signal-to-Noise Ratio for the first {split} Camera', fontsize=16)
-            ax.grid(True, linestyle='--', alpha=0.7)
-            ax.legend(fontsize=12)
-            plt.tight_layout()
-            plt.savefig(f'{path}/{split}_psnr_it{step}.png', dpi=300)
-            plt.close()
-
-            canvas_list = [first_cam_gt_image[..., :3], first_img_ours]  #else, use gt image
-            # save canvas
-            canvas = torch.cat(canvas_list, dim=2).squeeze(0).cpu().numpy() #concat along width
-            canvas = (canvas * 255).astype(np.uint8)
-            dynamic_test_path = path
-            # os.makedirs(dynamic_test_path, exist_ok=True)
-
-            imageio.mimwrite(
-                f"{dynamic_test_path}/{split}_{first_camera_indx}_it{step}.mp4",
-                canvas,
-                fps = canvas.shape[0]/self.cfg.video_duration
-            )
-            del pred_param, colors, canvas
-        return psnr_ours_dict
 
     @torch.no_grad()
     def visualize_renderings_captured(self, fixed_initial_params, debug_raster_params, bounding_box_mask, step, cfg, num_timesteps=35,path="debug_final", viz_reference=False):
@@ -1813,142 +1704,6 @@ class Trainer(BaseEngine):
 
         return psnr_ours_dict
 
-    #TODO: write visualize_renderings_4dgs_captured and train 4dgs to see if train_dynamic_captured works?
-    @torch.no_grad()
-    def visualize_renderings_4dgs(self, fixed_initial_params, debug_raster_params, step, cfg, num_timesteps=35,path="debug_final", split="train", viz_reference=False):
-        """
-        For this version, you don't feed in t=0, furthermore you need to run a for loop over each timestep.
-        """
-        os.makedirs(path, exist_ok=True)
-        scene  = cfg.data_dir.split("/")[-1]
-        all_indices = list(range(0, num_timesteps))
-        psnr_ours_dict = defaultdict(list)
-        for split in ["test"]:
-            if split == "train":
-                c2ws_all, gt_images_all, inp_t_all = self.trainset.getfirstcam(all_indices)  
-                inp_t_all = inp_t_all[1:] #getting rid of double 0
-            if split == "test":
-                c2ws_all, gt_images_all, inp_t_all = self.testset.getfirstcam(all_indices)  
-            # inp_t_all = torch.tensor([0., 0.1], device="cuda")
-            first_cam_gt_image = gt_images_all[0]
-            pred_param_all = []
-            for t in inp_t_all[1:]:
-                pred = self.dynamical_model(fixed_initial_params, torch.tensor([0., t], device="cuda", dtype=torch.float32)) #(T, N_gaussians, feat_dim)
-                pred_param_all.append(pred[1:])
-            pred_param_all.insert(0, fixed_initial_params[None]) #prepend initial parameters to the beginning of the list.
-            pred_param = torch.cat(pred_param_all, dim=0)
-            debug_raster_params["viewmats"] = c2ws_all.cuda() #we replace here since we need to use the test cameras.
-            debug_raster_params["Ks"] = debug_raster_params["Ks"][0, None]
-            colors, _ = self.gaussians.rasterize_with_dynamic_params(pred_param, debug_raster_params, activate_params=True) 
-            first_img_ours = torch.clamp(colors[0], 0,1).cpu() #only visualize stuff from first camera.
-            included_test_files = self.testset.image_ids_dict["r_0"]
-            cleaned_test_files = sorted([f.split("/")[-1] for f in included_test_files])
-            first_img_upper = {}
-            if split == "train":
-                first_camera_indx = list(self.trainset.images.keys())[0]
-            else:
-                first_camera_indx = list(self.testset.images.keys())[0]
-            if "subset" in scene: #if subset is present, backtrack to the actual scene
-                base_dir = f"./results/rose_transparent/per_timestep_static/full_static_eval/{split}/{first_camera_indx}" #TODO: fix this hardcoding
-            else:
-                base_dir = f"./results/{scene}/per_timestep_static/full_static_eval/{split}/{first_camera_indx}"
-            if os.path.exists(base_dir): #only compute psnr for upper bound if it exists.
-                upper_bound_dir_exist = True
-                img_files_upper = [f for f in os.listdir(base_dir) if f.endswith(".png")]
-                for img_file in sorted(img_files_upper):
-                    if img_file in cleaned_test_files:
-                        image = torch.tensor(imageio.imread(os.path.join(base_dir, img_file)) / 255.0, dtype=torch.float32)
-                        image = torch.clamp(image, 0, 1)
-                        first_img_upper[img_file] = image
-                # first_img_upper = torch.cat(first_img_upper, dim=0)
-                imgs = []
-                psnr_upper_bound_lst = []
-                upper_bound_location = f"./data/dynamic/blender/360/multi-view/30_views/rose_transparent/upper_bound/{split}/upper_bound_35.pt"  #NOTE: this only shows 
-                os.makedirs(os.path.dirname(upper_bound_location),exist_ok=True)
-                #1. Compute the PSNR of upper bound against ground truth, store as a tensor so we can re-use.  
-                if not os.path.exists(upper_bound_location):
-                    for t in range(num_timesteps):
-                        gt_image_t = first_cam_gt_image[t]
-                        upper_bound_key = cleaned_test_files[t]
-                        upper_bound_t = first_img_upper[upper_bound_key]
-                        gt_has_alpha = gt_image_t.shape[-1] == 4
-                        eval_pixels = torch.clamp(gt_image_t, 0.0, 1.0)
-                        
-                        psnr_upper_bound = round(_psnr(upper_bound_t, eval_pixels).item(), 2)
-                        psnr_upper_bound_lst.append(psnr_upper_bound) 
-                    torch.save(psnr_upper_bound_lst, upper_bound_location)
-                else:
-                    psnr_upper_bound_lst = torch.load(upper_bound_location, weights_only=False)
-            else:
-                upper_bound_dir_exist = False
-
-            
-            #2. Compute PSNR for our method.    
-            for t in range(num_timesteps):
-                gt_image_t = first_cam_gt_image[t]
-                ours_t = first_img_ours[t]
-                eval_pixels = torch.clamp(gt_image_t, 0.0, 1.0)
-                psnr_ours = round(_psnr(ours_t, eval_pixels).item(), 2)
-                psnr_ours_dict[split].append(psnr_ours) 
-
-            
-            #saving our own psnr list so we can re-use it 
-            regular_psnr_ours_dict = dict(psnr_ours_dict)
-            with open('my_data.json', 'w') as f:
-                json.dump(regular_psnr_ours_dict, f)
-            #3. Visualize PSNR over time on same graph
-            fig, ax = plt.subplots(figsize=(12, 8))
-            
-            # Define a color cycle for multiple baselines
-            if upper_bound_dir_exist:
-                methods = ["upper_bound", "ours"] 
-                data_lists = [psnr_upper_bound_lst, psnr_ours_dict[split]]
-            else:
-                methods = ["ours"] 
-                data_lists = [psnr_ours_dict[split]]
-            if viz_reference:
-                raise NotImplementedError
-            # Plot data for each method
-            colors = sns.color_palette("husl", len(methods))
-            for i, (method, data) in enumerate(zip(methods, data_lists)):
-                timesteps = range(0, len(data))
-                ax.plot(timesteps, data, '-', label=method, linewidth=2, color=colors[i])
-            if split == "train":
-                ax.set_ylim(0, 45)  # Fixed PSNR range from 0 to 35 dB
-            else:
-                ax.set_ylim(0, 35)  # Fixed PSNR range from 0 to 35 dB
-            ax.set_xlim(0, num_timesteps-1)
-            if num_timesteps > 50: #if there's too many timesteps, reduce the numb ofticks
-                ax.set_xticks(range(0, num_timesteps + 1, int(num_timesteps/35)))
-            else:
-                ax.set_xticks(range(0, num_timesteps + 1))
-            ax.set_xlabel('Timestep', fontsize=14)
-            ax.set_ylabel('PSNR (dB)', fontsize=14)
-            ax.set_title(f'Peak Signal-to-Noise Ratio for the first {split} Camera', fontsize=16)
-            ax.grid(True, linestyle='--', alpha=0.7)
-            ax.legend(fontsize=12)
-            plt.tight_layout()
-            plt.savefig(f'{path}/{split}_psnr_it{step}.png', dpi=300)
-            plt.close()
-
-            if len(first_img_upper) != 0:
-                canvas_list = [torch.stack(list(first_img_upper.values()), dim=0), first_img_ours]  #if we have upper bound, then plot it
-            else:
-                canvas_list = [first_cam_gt_image[..., :3], first_img_ours]  #else, use gt image
-            # save canvas
-            canvas = torch.cat(canvas_list, dim=2).squeeze(0).cpu().numpy() #concat along width
-            canvas = (canvas * 255).astype(np.uint8)
-            dynamic_test_path = path
-            # os.makedirs(dynamic_test_path, exist_ok=True)
-
-            imageio.mimwrite(
-                f"{dynamic_test_path}/{split}_{first_camera_indx}_it{step}.mp4",
-                canvas,
-                fps = canvas.shape[0]/self.cfg.video_duration
-            )
-
-            #1. load gt images 
-        return psnr_ours_dict
     
     @torch.no_grad()
     def visualize_fixed_pc_traj_captured(self, fixed_trajectory, debug_raster_params, step, cfg, path="mixed_init_training"):

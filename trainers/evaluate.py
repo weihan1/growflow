@@ -1,7 +1,6 @@
 import torch
 from tqdm import tqdm
 import time
-import yaml
 import torch.nn.functional as F
 import json
 import imageio
@@ -24,8 +23,6 @@ from helpers.criterions_exports import write_dict_to_csv
 import matplotlib.pyplot as plt
 from helpers.criterions import psnr as _psnr 
 import cv2
-import seaborn as sns
-import subprocess
 
 
 class Evaluator(BaseEngine):
