@@ -7,7 +7,7 @@ data_dir = Path("./data")
 data_dir.mkdir(exist_ok=True)
 print("Downloading dataset from Hugging Face...")
 snapshot_download(
-    repo_id="username/growflow_dataset",  # Replace with your HF repo
+    repo_id="weihan1/growflow_dataset", 
     repo_type="dataset",
     local_dir=str(data_dir),
     resume_download=True
