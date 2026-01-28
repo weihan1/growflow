@@ -985,113 +985,12 @@ class Trainer(BaseEngine):
                     rotation_angles = (0,-50,0)
                     _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
                     
-            elif cfg.use_mask_proj: #in this case, load all the masks, apply dilation and project the 3DGaussians onto the viewpoint of each of the masks
-                print("using mask projection segmentation")
-                if cfg.learn_masks: #in this case, we have trained a set of gaussian masks, so we can directly use them for 3D segmentations
-                    assert "masks" in self.gaussians.splats, "need to have trained 3D masks to use this"
-                    print("3D masks detected, using them")
-                    masks_ind = torch.sigmoid(self.gaussians.splats["masks"])
-                    bounding_box_mask = (masks_ind > cfg.mask_threshold).squeeze()
-                else:
-                    print("using mask intersection to detect masks")
-                    t0 = 0
-                    Ks = torch.from_numpy(self.trainset.timestep_intrinsics[t0][1])[None].to(device="cuda", dtype=torch.float32)
-                    height = raster_params["height"]
-                    width = raster_params["width"]
-                    
-                    # Choose between union and intersection based on config
-                    use_intersection = getattr(cfg, 'use_mask_intersection', False)  # Default to union (False)
-                    
-                    if use_intersection:
-                        # For intersection: collect sets for each viewpoint, then intersect
-                        per_viewpoint_gaussian_sets = []
-                    else:
-                        # For union: accumulate all indices
-                        union_gaussian_indices = set()
-                    
-                    for pose_idx in self.trainset.timestep_poses[t0].keys():
-                        curr_image = self.trainset.timestep_images[t0][pose_idx]
-                        mask = self.trainset.timestep_masks[t0][pose_idx]
-                        viewmat = self.trainset.timestep_poses[t0][pose_idx]
-                        c2ws = torch.from_numpy(viewmat).to(Ks)
-
-                        if cfg.use_own_impl:
-                            current_viewmat = torch.linalg.inv(c2ws)  #following functions assume w2c
-                            current_means_cam = world_to_cam_means(means_t0, current_viewmat[None])
-                            means_2d = pers_proj_means(current_means_cam, Ks, width=width, height=height).squeeze()
-                        else: #use gsplat implementation by just rasterizing an image and using their means_2d
-                            _,_, infos = self.gaussians.rasterize_quick_captured(c2w=c2ws[None], K=Ks, width=width, height=height)
-                            means_2d = infos["means2d"].squeeze()
-                        
-                        mask = torch.from_numpy(mask).to(device="cuda", dtype=torch.float32)
-
-                        # Get valid 2D coordinates (within image bounds)
-                        valid_mask = (means_2d[..., 0] >= 0) & (means_2d[..., 0] < width) & \
-                                    (means_2d[..., 1] >= 0) & (means_2d[..., 1] < height)
-                        
-                        # Get integer pixel coordinates for valid points
-                        pixel_coords = means_2d[valid_mask].long()
-                        
-                        # Check which gaussians fall within the mask
-                        mask_values = mask[pixel_coords[:, 1], pixel_coords[:, 0]]  # Note: y, x indexing for mask
-                        gaussians_in_mask = torch.where(valid_mask)[0][mask_values > 0]  # Assuming mask > 0 indicates foreground
-                        
-                        if use_intersection:
-                            # Store as a set for this viewpoint
-                            per_viewpoint_gaussian_sets.append(set(gaussians_in_mask.cpu().numpy().tolist()))
-                        else:
-                            # Add to union set
-                            union_gaussian_indices.update(gaussians_in_mask.cpu().numpy().tolist())
-                    
-                    # Process results based on chosen method
-                    if use_intersection:
-                        # Take intersection of all sets
-                        if per_viewpoint_gaussian_sets:
-                            intersection_gaussian_indices = per_viewpoint_gaussian_sets[0]
-                            for gaussian_set in per_viewpoint_gaussian_sets[1:]:
-                                intersection_gaussian_indices = intersection_gaussian_indices.intersection(gaussian_set)
-                            
-                            final_gaussian_indices = torch.tensor(list(intersection_gaussian_indices), device="cuda", dtype=torch.long)
-                            print(f"Intersection: Found {len(final_gaussian_indices)} gaussians present in all {len(per_viewpoint_gaussian_sets)} viewpoints")
-                        else:
-                            final_gaussian_indices = torch.tensor([], device="cuda", dtype=torch.long)
-                    else:
-                        # Use union (original behavior)
-                        final_gaussian_indices = torch.tensor(list(union_gaussian_indices), device="cuda", dtype=torch.long)
-                        print(f"Union: Found {len(final_gaussian_indices)} gaussians present in at least one viewpoint")
-                    
-                    bounding_box_mask = torch.zeros(len(means_t0), dtype=torch.bool, device="cuda")
-                    bounding_box_mask[final_gaussian_indices] = True
-
             else: # use all gaussians 
                 print("no segmentation, using all gaussians")
                 bounding_box_mask = torch.ones(means_t0.shape[0], dtype=bool)
                 
             num_gauss_ode = bounding_box_mask.sum()
             print(f"out of {bounding_box_mask.shape[0]} gaussians, we train with {num_gauss_ode} gaussians")
-
-            #before we start training verify that the poses are consistent between t1 and t0
-            # NOTE: use code below to verify consistent poses across times
-            # intrinsics = torch.from_numpy(self.trainset.timestep_intrinsics[0][1]).to(torch.float32).to("cuda")[None]
-            # for timestep in self.trainset.timestep_poses.keys():
-            #     all_training_poses_current_time = self.trainset.timestep_poses[timestep].keys()
-            #     height = raster_params["height"]
-            #     width = raster_params["width"]
-            #     #NOTE: gt image is less grown and pred_canvas is fully grown, so left less grown, right more grown.
-            #     for cam_id in all_training_poses_current_time:
-            #         poses = torch.from_numpy(self.trainset.timestep_poses[timestep][cam_id][None]).to(intrinsics)
-            #         t1_image = self.trainset.timestep_images[timestep][cam_id].clip(0,1)
-            #         # gt_mask = self.trainset.timestep_masks[timestep_to_view][cam_id]
-            #         t0_image = self.gaussians.rasterize_quick_captured(poses, intrinsics, height, width)[0].clamp(0,1).cpu().numpy().squeeze()
-            #         t1_canvas = (t1_image * 255).astype(np.uint8) #(h,w,3)
-            #         t0_canvas = (t0_image * 255).astype(np.uint8)#(h,w,3)
-            #         # mask_canvas = (gt_mask > 0.5).astype(np.float32)  # Binary threshold
-            #         # canvas = np.concatenate([gt_canvas, pred_canvas, mask_canvas.shape + (3,))], axis=1).astype(np.uint8)
-            #         canvas = np.concatenate([t1_canvas, t0_canvas], axis=1).astype(np.uint8)
-            #         imageio.imwrite(
-            #             f"{cfg.result_dir}/cam_t{timestep}_{cam_id}.png",
-            #             canvas,
-            #         )
 
         else:
             #either learn masks  or use bounding box
@@ -1164,7 +1063,6 @@ class Trainer(BaseEngine):
                             print("resetting adam states!")
                             reset_adam_states(self.dynamical_model.optimizers)
                             
-                #NOTE: shouldn't create a new dataloader here makes no sense
                 # print(f"The current indices are {lst_of_prog_indices}") 
                 # trainloader_iter = create_dataloader_during_prog(trainset=self.trainset, lst_of_prog_indices=lst_of_prog_indices, shuffle_ind=cfg.shuffle_ind, temp_batch_size=temp_batch_size)
 

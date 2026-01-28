@@ -1,27 +1,17 @@
 import os
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
-from collections import defaultdict
 from typing import Tuple
 from datetime import datetime
-import imageio
 import nerfview
 import numpy as np
 import torch
 import torch.nn.functional as F
 import wandb
 import secrets
-import re
-#datasets stuff
 from datasets.colmap import DynamicParser
-
-#helpers
 from helpers.utils import safe_state, setup_directories, verify_optimizer_parameter_references
-
-#trainers 
 from trainers.trainer import Trainer
 from trainers.evaluate import Evaluator
-
-#models 
 from models.gaussian_model import Gaussians
 
 
