@@ -149,28 +149,6 @@ def convert_to_csv(results, output_path,name="summary_results.csv"):
 
 
 def evaluate(cfg, data_dir, method_paths, output_path, split="test", use_mask_psnr=True):
-    """
-    1. Open all the test images with alpha channel
-    2. For each method, open their rendered images
-    3. Compute per camera per timestep metrics
-    4. Store in a dict
-    The results will store the results like this:
-    -In the outer key, it will store all baseline name
-    -For each baseline, it will store all metrics (psnr, ssim, lpips, chamfer distance)
-    -For each metric, it will be keyed by camera index
-    -Finally for each camera index, it will be keyed by timestep
-    -Finally, the value is the corresponding metric value
-
-    Compute all metrics on gpu
-    NOTE: this function would also save the point cloud trajectories 
-    round PSNR by 2 decimals, SSIM and LPIPS by 3 decimals and chamfer distance by 2 decimals
-
-    Couple of things to note:
-    1. All RENDERED images should follow the same convention (i.e. 00000.png represents full grown)
-    2. Is_reverse should NEVER be set. Your data should already be in the right format, otherwise too confusing.
-    3. THe second thing is the gt images do not follow the shrinkage convention, therefore, when creating the video for gt, we use reverse option in ffmpeg.
-    4. For the point cloud stuff, i created a simple mapping that will map mesh_indices[i] -> mesh_indices[N-i+1] 
-    """
 
     os.makedirs(output_path, exist_ok=True)
 
@@ -184,7 +162,7 @@ def evaluate(cfg, data_dir, method_paths, output_path, split="test", use_mask_ps
     )
 
     parser = DynamicParser(
-        data_dir=cfg.data_dir,
+        data_dir=data_dir,
         factor=cfg.data_factor,
         normalize=cfg.normalize_world_space,
         test_every=cfg.test_every,
@@ -298,8 +276,9 @@ def evaluate(cfg, data_dir, method_paths, output_path, split="test", use_mask_ps
             img2vid(full_camera_path, img_files)
             for i, img_file in enumerate(img_files):
                 # Extract timestep from filename (assuming it's like "000.png", "001.png", etc.)
-                timestep = int(img_file.split(".")[0])
-                print(timestep)
+                # timestep = int(img_file.split(".")[0])
+                timestep = i
+                # print(timestep)
                 # Load rendered image
                 full_img_path = os.path.join(full_camera_path, img_file)
                 rendered_img = imageio.imread(full_img_path)
@@ -443,18 +422,16 @@ if __name__ == "__main__":
 
     # The order of renderings is always gt, ours, Dynamic3DGS, 4dgs, 4dgaussians
     gt_data_dir = {
-        "pi_rose":"./data/dynamic/captured/pi_rose",
-        "pi_corn_full_subset4": "./data/dynamic/captured/pi_corn_full_subset4",
-        "pi_rose_low_res":"./data/dynamic/captured/pi_rose",
+        "pi_rose":"./data/captured/pi_rose",
+        "pi_corn_full_subset4": "./data/captured/pi_corn_full_subset4",
     }
 
     our_test_folders = {
-        "pi_corn_full_subset4": "./results/pi_corn_full_subset4/final/full_eval/test",
-        "pi_rose": "./results/pi_rose/final/full_eval/test",
-        "pi_rose_low_res": "./results/pi_rose/subsample17_low_res/full_eval/test"
+        "pi_corn_full_subset4": "./results/pi_corn_full_subset4/full_eval/test",
+        "pi_rose": "./results/pi_rose/full_eval/test",
     }
 
-    for scene in ["pi_corn_full_subset4"]:
+    for scene in ["pi_corn_full_subset4", "pi_rose"]:
         data_dir = gt_data_dir[scene]
         print(f"getting all results for scene {scene}")
         device = torch.device("cuda:0")

@@ -104,9 +104,9 @@ Our model is trained in 3 stages (see sect. 3.3 of paper), the static reconstruc
 ### Metrics 
 NOTE: You can only run the metrics code after running the eval code.
 
-**Synthetic:** `python metrics_interp.py --data-dir <your_data_dir> --skip-dynamic3dgs --skip-4dgs --skip-4dgaussians`
+**Synthetic:** `python metrics_interp.py --skip-dynamic3dgs --skip-4dgs --skip-4dgaussians`
 
-**Captured:** `python metrics_captured.py --data-dir <your_data_dir> --skip-dynamic3dgs --skip-4dgs --skip-4dgaussians`
+**Captured:** `python metrics_captured.py --skip-dynamic3dgs --skip-4dgs --skip-4dgaussians`
 
 
 ## Tips for training on custom data

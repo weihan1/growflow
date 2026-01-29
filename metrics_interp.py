@@ -20,9 +20,6 @@ from helpers.image_utils import visualize_tensor_error_map
 import subprocess
 from glob import glob
 import yaml
-import argparse 
-from PIL import Image
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def img2vid(path, img_files, is_reverse=False):
     """
@@ -39,10 +36,6 @@ def img2vid(path, img_files, is_reverse=False):
     cleaned_img_files = [f for f in img_files if f.endswith(".png")]
     num_images = len(cleaned_img_files)
 
-    if "70_timesteps" in path:
-        assert num_images == 70, f"in  {path} there are {num_images}, should be 70"
-    else:
-        assert num_images == 35, f"in {path}, there are {num_images}, should be 35" 
     
     ffmpeg_cmd = [
         "ffmpeg",
@@ -258,28 +251,6 @@ def convert_to_csv(results, output_path, name="summary_results.csv"):
 
 
 def evaluate(cfg, data_dir, method_paths, output_path, split="test"):
-    """
-    1. Open all the test images with alpha channel
-    2. For each method, open their rendered images
-    3. Compute per camera per timestep metrics
-    4. Store in a dict
-    The results will store the results like this:
-    -In the outer key, it will store all baseline name
-    -For each baseline, it will store all metrics (psnr, ssim, lpips, chamfer distance)
-    -For each metric, it will be keyed by camera index
-    -Finally for each camera index, it will be keyed by timestep
-    -Finally, the value is the corresponding metric value
-
-    Compute all metrics on gpu
-    NOTE: this function would also save the point cloud trajectories 
-    round PSNR by 2 decimals, SSIM and LPIPS by 3 decimals and chamfer distance by 2 decimals
-
-    Couple of things to note:
-    1. All RENDERED images should follow the same convention (i.e. 00000.png represents full grown)
-    2. Is_reverse should NEVER be set. Your data should already be in the right format, otherwise too confusing.
-    3. THe second thing is the gt images do not follow the shrinkage convention, therefore, when creating the video for gt, we use reverse option in ffmpeg.
-    4. For the point cloud stuff, i created a simple mapping that will map mesh_indices[i] -> mesh_indices[N-i+1] 
-    """
 
     os.makedirs(output_path, exist_ok=True)
 
@@ -424,8 +395,8 @@ def evaluate(cfg, data_dir, method_paths, output_path, split="test"):
                     print("skipping last timestep...")
                     break
                 # Extract timestep from filename (assuming it's like "000.png", "001.png", etc.)
-                timestep = int(img_file.split(".")[0])
-                
+                # timestep = int(img_file.split(".")[0])
+                timestep = i 
                 # Load rendered image
                 full_img_path = os.path.join(full_camera_path, img_file)
                 rendered_img = imageio.imread(full_img_path)
@@ -782,48 +753,25 @@ if __name__ == "__main__":
     assert cfg.bkgd_color == [1,1,1] or cfg.bkgd_color == [0,0,0], "support metrics code only on white/black background"
 
     gt_data_dir = {
-        #subsample 3
-        "clematis_transparent_final_small_vase_70_timesteps_subsample_3": "./data/dynamic/blender/360/multi-view/31_views/clematis_transparent_final_small_vase_70_timesteps_subsample_3",
-        "tulip_transparent_final_small_vase_70_timesteps_subsample_3": "./data/dynamic/blender/360/multi-view/31_views/tulip_transparent_final_small_vase_70_timesteps_subsample_3",
-        "plant_1_transparent_final_small_vase_70_timesteps_subsample_3": "./data/dynamic/blender/360/multi-view/31_views/plant_1_transparent_final_small_vase_70_timesteps_subsample_3",
-        "plant_2_transparent_final_small_vase_70_timesteps_subsample_3": "./data/dynamic/blender/360/multi-view/31_views/plant_2_transparent_final_small_vase_70_timesteps_subsample_3",
-        "plant_3_transparent_final_small_vase_70_timesteps_subsample_3": "./data/dynamic/blender/360/multi-view/31_views/plant_3_transparent_final_small_vase_70_timesteps_subsample_3",
-        "plant_4_transparent_final_small_vase_70_timesteps_subsample_3": "./data/dynamic/blender/360/multi-view/31_views/plant_4_transparent_final_small_vase_70_timesteps_subsample_3",
-
-        #subsample 6
-        "clematis_transparent_final_small_vase_70_timesteps_subsample_6": "./data/dynamic/blender/360/multi-view/31_views/clematis_transparent_final_small_vase_70_timesteps_subsample_6",
-        "tulip_transparent_final_small_vase_70_timesteps_subsample_6": "./data/dynamic/blender/360/multi-view/31_views/tulip_transparent_final_small_vase_70_timesteps_subsample_6",
-        "plant_1_transparent_final_small_vase_70_timesteps_subsample_6": "./data/dynamic/blender/360/multi-view/31_views/plant_1_transparent_final_small_vase_70_timesteps_subsample_6",
-        "plant_2_transparent_final_small_vase_70_timesteps_subsample_6": "./data/dynamic/blender/360/multi-view/31_views/plant_2_transparent_final_small_vase_70_timesteps_subsample_6",
-        "plant_3_transparent_final_small_vase_70_timesteps_subsample_6": "./data/dynamic/blender/360/multi-view/31_views/plant_3_transparent_final_small_vase_70_timesteps_subsample_6",
-        "plant_4_transparent_final_small_vase_70_timesteps_subsample_6": "./data/dynamic/blender/360/multi-view/31_views/plant_4_transparent_final_small_vase_70_timesteps_subsample_6",
-        "plant_5_transparent_final_small_vase_70_timesteps_subsample_6": "./data/dynamic/blender/360/multi-view/31_views/plant_5_transparent_final_small_vase_70_timesteps_subsample_6",
+        "clematis_transparent_final_small_vase_70_timesteps_subsample_6": "./data/synthetic/clematis_transparent_final_small_vase_70_timesteps_subsample_6",
+        "tulip_transparent_final_small_vase_70_timesteps_subsample_6": "./data/synthetic/tulip_transparent_final_small_vase_70_timesteps_subsample_6",
+        "plant_1_transparent_final_small_vase_70_timesteps_subsample_6": "./data/synthetic/plant_1_transparent_final_small_vase_70_timesteps_subsample_6",
+        "plant_2_transparent_final_small_vase_70_timesteps_subsample_6": "./data/synthetic/plant_2_transparent_final_small_vase_70_timesteps_subsample_6",
+        "plant_3_transparent_final_small_vase_70_timesteps_subsample_6": "./data/synthetic/plant_3_transparent_final_small_vase_70_timesteps_subsample_6",
+        "plant_4_transparent_final_small_vase_70_timesteps_subsample_6": "./data/synthetic/plant_4_transparent_final_small_vase_70_timesteps_subsample_6",
+        "plant_5_transparent_final_small_vase_70_timesteps_subsample_6": "./data/synthetic/plant_5_transparent_final_small_vase_70_timesteps_subsample_6",
     }
 
-    if cfg.bkgd_color == [1,1,1]:
-        our_test_folders = {
-            #subsample 6
-            "clematis_transparent_final_small_vase_70_timesteps_subsample_6": "./results/clematis_transparent_final_small_vase_70_timesteps/final_subsample_6_white_final/full_eval/test_white",
-            "tulip_transparent_final_small_vase_70_timesteps_subsample_6": "./results/tulip_transparent_final_small_vase_70_timesteps/final_subsample_6_white_final/full_eval/test_white",
-            "plant_1_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_1_transparent_final_small_vase_70_timesteps/final_subsample_6_white_final/full_eval/test_white",
-            "plant_2_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_2_transparent_final_small_vase_70_timesteps/final_subsample_6_white_final/full_eval/test_white",
-            "plant_3_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_3_transparent_final_small_vase_70_timesteps/final_subsample_6_white_final/full_eval/test_white",
-            "plant_4_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_4_transparent_final_small_vase_70_timesteps/final_subsample_6_white_final/full_eval/test_white",
-            "plant_5_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_5_transparent_final_small_vase_70_timesteps/final_subsample_6_white_final/full_eval/test_white",
+    our_test_folders = {
+        "clematis_transparent_final_small_vase_70_timesteps_subsample_6": "./results/clematis/full_eval/test_masked",
+        "tulip_transparent_final_small_vase_70_timesteps_subsample_6": "./results/tulip/full_eval/test_masked",
+        "plant_1_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_1/full_eval/test_masked",
+        "plant_2_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_2/full_eval/test_masked",
+        "plant_3_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_3/full_eval/test_masked",
+        "plant_4_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_4/full_eval/test_masked",
+        "plant_5_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_5/full_eval/test_masked",
 
-        }
-    else: #black background
-        our_test_folders = {
-            #subsample 6
-            "clematis_transparent_final_small_vase_70_timesteps_subsample_6": "./results/clematis_transparent_final_small_vase_70_timesteps/final/full_eval/test_masked",
-            "tulip_transparent_final_small_vase_70_timesteps_subsample_6": "./results/tulip_transparent_final_small_vase_70_timesteps/final/full_eval/test_masked",
-            "plant_1_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_1_transparent_final_small_vase_70_timesteps/final/full_eval/test_masked",
-            "plant_2_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_2_transparent_final_small_vase_70_timesteps/final/full_eval/test_masked",
-            "plant_3_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_3_transparent_final_small_vase_70_timesteps/final/full_eval/test_masked",
-            "plant_4_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_4_transparent_final_small_vase_70_timesteps/final/full_eval/test_masked",
-            "plant_5_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_5_transparent_final_small_vase_70_timesteps/final/full_eval/test_masked",
-
-        }
+    }
         
 
     scenes = ["clematis_transparent_final_small_vase_70_timesteps_subsample_6",
