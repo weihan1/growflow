@@ -115,7 +115,7 @@ NOTE: You can only run the metrics code after running the eval code.
 
 
 ## Reproducing numbers
-Dowload the dataset and checkpoints and then run the metrics code.
+Dowload the dataset and checkpoints and then run `python render_all.py` to get the renderings and then run the metrics code.
 
 ## Credits 
 This code is built on top of [gsplat](https://github.com/nerfstudio-project/gsplat) and [torchdiffeq](https://github.com/rtqichen/torchdiffeq). Thanks to the maintainers for their contribution to the community!
