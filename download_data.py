@@ -16,7 +16,7 @@ print("Download complete.\n")
 for archive in data_dir.glob("*.tar.zst"):
     print(f"Extracting {archive.name} ...")
     subprocess.run(
-        f"zstd -dc {archive} | tar -xf -",
+        f"zstd -dc -T0 {archive} | tar -xf -", 
         shell=True,
         check=True
     )

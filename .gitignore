@@ -2,7 +2,6 @@ __pycache__/
 *.png
 *.npy
 *.mp4
-*.txt
 static/
 *.npz 
 results/

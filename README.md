@@ -27,22 +27,21 @@ modeling of growing 3D structures.
 
 ## Installation
 
-1. Create a new conda environment (make sure miniconda3 is installed beforehand). We tested on python version 3.10.8
-```
-conda create -n env_name python=3.10.8
-conda activate env_name
-```
-2. Additionally please install PyTorch>=1.10 from (https://pytorch.org/get-started/previous-versions/).
-
-3. Install the requirements file with 
-
-```
-pip install -r requirements.txt
-```
-4. Clone the repository
+1. Clone the repository
 ```
 git clone https://github.com/weihan1/growflow.git
 cd growflow/
+```
+2. Create a new conda environment (make sure miniconda3 is installed beforehand). We tested on python version 3.10.8
+```
+conda create -yn env_name python=3.10.8
+conda activate env_name
+```
+3. Additionally please install PyTorch>=1.10 from (https://pytorch.org/get-started/previous-versions/).
+4. Install the requirements file with 
+
+```
+pip install -r requirements.txt
 ```
 
 
