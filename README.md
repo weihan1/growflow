@@ -1,4 +1,4 @@
-# Grow with the Flow: Modeling Plant Morphogenesis with 3D Gaussian Flow Fields
+# Grow with the Flow: 4D Reconstruction of Growing Plants with Gaussian Flow Fields
 
 **TL;DR: 4D reconstruction of plant growth from multi-view timelapse measurements using neural ODE.**
 
