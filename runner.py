@@ -70,6 +70,7 @@ class Runner:
         if cfg.data_type == "colmap":
             from datasets.colmap import Dynamic_Dataset, Dynamic_Datasetshared
 
+            white_bkgd = cfg.bkgd_color == [1,1,1]
             # Load data: Training data should contain initial points and colors.
             self.parser = DynamicParser(
                 data_dir=cfg.data_dir,
@@ -85,7 +86,8 @@ class Runner:
                 use_crops=cfg.use_crops,
                 use_bg_masks = cfg.use_bg_masks,
                 end_until=cfg.end_until,
-                include_end=cfg.include_end
+                include_end=cfg.include_end,
+                white_bkgd=white_bkgd
             )
 
             #This loads all the data and stores it in a dict
