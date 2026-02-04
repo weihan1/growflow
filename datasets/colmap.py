@@ -114,7 +114,8 @@ class DynamicParser:
         use_crops: bool=False,
         use_bg_masks: bool=False,
         end_until:int =0,
-        include_end: bool=False
+        include_end: bool=False,
+        white_bkgd: bool=False
     ):
         
         self.data_dir = data_dir
@@ -127,6 +128,7 @@ class DynamicParser:
         self.use_bg_masks = use_bg_masks
         self.end_until = end_until
         self.include_end = include_end
+        self.white_bkgd = white_bkgd
 
         # Initialize storage for all timesteps
         self.timestep_data = [] #this stores per-timestep data
@@ -614,7 +616,10 @@ class Dynamic_Datasetshared():
                     inverted_mask = inverted_mask[y : y + h, x : x + w]
                 
                 if self.apply_mask:
-                    image = image * inverted_mask[..., np.newaxis]
+                    if self.parser.white_bkgd:
+                        image = image * inverted_mask[..., np.newaxis] + np.array([1,1,1]) * (1-inverted_mask[...,np.newaxis])
+                    else:
+                        image = image * inverted_mask[..., np.newaxis]
 
                 images[image_id] = image
                 masks[image_id] = inverted_mask
