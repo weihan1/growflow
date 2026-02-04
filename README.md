@@ -3,19 +3,13 @@
 **TL;DR: 4D reconstruction of plant growth from multi-view timelapse measurements using neural ODE.**
 
 **Full Abstract**:
-Modeling the time-varying 3D appearance of plants during their growth (or morphogenesis) poses unique challenges: unlike many dynamic scenes, plants generate new geometry over time as they expand, branch, and differentiate. Recent motion modeling techniques are ill-suited to this
-problem setting. For example, deformation fields cannot
-introduce new geometry, and 4D Gaussian splatting constrains motion to a linear trajectory in space and time and cannot track the same set of Gaussians over time. Here, we introduce a 3D Gaussian flow field representation that
-models plant morphogenesis as a time-varying derivative
-over Gaussian parameters—position, scale, orientation,
-color, and opacity—enabling nonlinear and continuous-
-time growth dynamics. To initialize a sufficient set of Gaussian primitives, we reconstruct the mature plant and learn
-a process of reverse morphogenesis, effectively simulating
-the plant’s developmental history in reverse. Our approach
-achieves superior image quality and geometric accuracy
-compared to prior methods multi-view timelapse datasets
-of plant growth, providing a new approach for appearance
-modeling of growing 3D structures.
+Modeling the time-varying 3D appearance of plants during their growth poses unique challenges: unlike many dynamic scenes, plants generate new geometry over time as they expand, branch, and differentiate.
+Recent motion modeling techniques are ill-suited to this problem setting. 
+For example, deformation fields cannot introduce new geometry, and 4D Gaussian splatting constrains motion to a linear trajectory in space and time and cannot track the same set of Gaussians over time.
+Here, we introduce a 3D Gaussian flow field representation that models plant growth as a time-varying derivative over Gaussian parameters---position, scale, orientation, color, and opacity---enabling nonlinear and continuous-time growth dynamics.
+To initialize a sufficient set of Gaussian primitives, we reconstruct the mature plant and learn a process of reverse growth, effectively simulating the plant's developmental history in reverse.
+Our approach achieves superior image quality and geometric accuracy compared to prior methods on multi-view timelapse datasets of plant growth, providing a new approach for appearance modeling of growing 3D structures.
+
 
 [Weihan Luo](https://weihan1.github.io/),
 [Lily Goli](https://lilygoli.github.io/),
@@ -43,6 +37,7 @@ conda activate env_name
 ```
 pip install -r requirements.txt
 ```
+NOTE: if you encounter issues with `torch not found`, try doing `pip install -r requirements.txt --no-build-isolation`
 
 
 ## Dataset and checkpoints
@@ -65,7 +60,7 @@ The dataset structure is
 
 NOTE: the synthetic datasets are already subsampled with interpolation factor 6, whereas the captured datasets are not subsampled, so you need to manually set the `subsample_factor` argument (see the boundary reconstruction and global optimization stage).
 
-To download the checkpoints, run `bash download_checkpoints.py`
+To download the checkpoints, run `python download_checkpoints.py`
 The checkpoint structure is 
 ```
 |-- ckpts

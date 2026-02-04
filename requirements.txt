@@ -1,9 +1,9 @@
 # assume torch is already installed
+huggingface_hub #for downloading data and stuff
 # pycolmap for data parsing
 git+https://github.com/rmbrualla/pycolmap@cc7ea4b7301720ac29287dbe450952511b32125e
-#gsplat
-git+https://github.com/nerfstudio-project/gsplat.git
 viser
+git+https://github.com/nerfstudio-project/gsplat.git
 imageio[ffmpeg]
 numpy<2.0.0
 scikit-learn
