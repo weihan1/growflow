@@ -81,8 +81,8 @@ class Config:
     
     #Neural ODE & friends
     augment_dim: int = 0
-    hidden_dim: int = 64  #this is not being used in hexplane...
-    hidden_depth: int = 3 
+    hidden_dim: int = 256
+    hidden_depth: int = 8
     min_step_size: float = 1e-4 #min_step_size to prevent underflow in adaptive methods
     encoding: str = "hexplane"
     bbox_expansion: bool=False
