@@ -69,7 +69,7 @@ The checkpoint structure is
 `-- fixed_pc_traj
     `-- full_traj_{some_number}.npy
 ```
-`neural_ode_29999.pt` is the final neural ODE checkpoint, where as `gaussian_ckpt_29999_t0.pt` and `full_traj_{some_number}.npy` are the cached Gaussians that you can use to directly train the neural ODE in the global optimization stage.
+`neural_ode_29999.pt` is the final neural ODE checkpoint, whereas `gaussian_ckpt_29999_t0.pt` and `full_traj_{some_number}.npy` are the cached Gaussians that you can use to directly train the neural ODE in the global optimization stage.
 
 ## Usage 
 ### Training 
@@ -104,7 +104,6 @@ NOTE: You can only run the metrics code after running the eval code.
 
 
 ## Tips for training on custom data
-- **Better reconstruction**. To improve reconstruction quality you want to have better initialization for the neural ODE in the global optimization stage. To that end, increase `static_max_steps` in the static reconstruction stage and also increase `min_iterations_req` in the boundary reconstruction stage. Furthermore feel free to lower the tolerances `rtol` or `atol` of the ode solver in the global optimization stage or boundary reconstruction stage.
 - **Use bounding box**. For all of our experiments, we hand-craft custom bounding boxes to constrain the neural ODE to only learn the the flow field of the foreground Gaussians. On your custom data, simply add the bounds of a bounding box that roughly includes the foreground plant.
 - **Decrease subsample factor**. For the real scenes, decreasing the temporal stride `--subsample-factor` and the image resolution `--data-factor` will lead to faster training and overall better reconstruction.
 - **Swap to MLP**. For all experiments, we parametrize the neural ODE using an Hexplane as it performs slightly better in the synthetic scenes (see ablation studies in paper). However, on some real scenes, we find that using an MLP with fourier-encoding performs better. You can swap the representation in the boundary reconstruction stage and global optimization stage by using the flag `--encoding freq`.
