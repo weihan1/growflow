@@ -28,8 +28,8 @@ cd growflow/
 ```
 2. Create a new conda environment (make sure miniconda3 is installed beforehand). We tested on python version 3.10.8
 ```
-conda create -yn env_name python=3.10.8
-conda activate env_name
+conda create -yn grow_env python=3.10.8
+conda activate grow_env
 ```
 3. Additionally please install PyTorch>=1.10 from (https://pytorch.org/get-started/previous-versions/).
 4. Install the requirements file with 
