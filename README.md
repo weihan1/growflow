@@ -31,7 +31,7 @@ cd growflow/
 conda create -yn grow_env python=3.10.8
 conda activate grow_env
 ```
-3. Additionally please install PyTorch>=1.10 from (https://pytorch.org/get-started/previous-versions/).
+3. Additionally please install PyTorch from (https://pytorch.org/get-started/previous-versions/).
 4. Install the requirements file with 
 
 ```

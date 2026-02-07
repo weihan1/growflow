@@ -21,3 +21,4 @@ open3d
 wandb
 git+https://github.com/harry7557558/fused-bilagrid@90f9788e57d3545e3a033c1038bb9986549632fe
 splines
+nerfview
