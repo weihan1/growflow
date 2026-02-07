@@ -23,7 +23,6 @@ import time
 
 from helpers.gsplat_utils import save_point_cloud_to_ply
 from typing import Union
-from pytorch3d.ops import iterative_closest_point
 import copy
 from helpers.gsplat_utils import map_cont_to_int
 from helpers.utils import get_divisors
