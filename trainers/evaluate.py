@@ -687,7 +687,6 @@ class Evaluator(BaseEngine):
         os.makedirs(debug_path, exist_ok=True)
 
         if not cfg.skip_test:
-            scene = cfg.data_dir.split("/")[-1].split("_transparent_final")[0]
             print("rendering test images")
             test_eval_path = os.path.join(full_eval_path, "test")
             raster_params = get_raster_params_blender(cfg, self.gaussians.splats, self.testset, self.gaussians.deformed_params_dict)
@@ -698,50 +697,53 @@ class Evaluator(BaseEngine):
                     test_eval_path = os.path.join(full_eval_path, "test_masked")
                 means_t0 = fixed_init_params[:, :3]
                 assert cfg.learn_masks ^ cfg.use_bounding_box, "can only learn masks or use bounding box"
-                if cfg.learn_masks:
-                    assert "masks" in self.gaussians.splats, "need to have trained 3D masks to use this"
-                    print("3D masks detected, using them")
-                    masks_ind = torch.sigmoid(self.gaussians.splats["masks"])
-                    bounding_box_mask = (masks_ind > cfg.mask_threshold).squeeze()
-                elif cfg.use_bounding_box:
-                    if "clematis" in cfg.data_dir:
-                        box_center = [0.015, 0.000, 1.678]
-                        dimensions = (0.350, 0.3, 0.5)
-                        rotation_angles = (0, 0, 0)
-                    elif "lily" in cfg.data_dir:
-                        box_center = [-0.005, -0.002, 1.678]
-                        dimensions = (0.30, 0.30, 0.43)
-                        rotation_angles = (0, 0, 0)
-                    elif "tulip" in cfg.data_dir:
-                        box_center = [0.007, -0.003968, 1.72722]
-                        dimensions = (0.32,0.2, 0.43)
-                        rotation_angles = (0, 0, 0)
-                    elif "plant_1" in cfg.data_dir:
-                        box_center = [-0.000, 0.000, 1.615]
-                        dimensions = (0.243, 0.243, 0.290)
-                        rotation_angles = (0,0,0)
-                    elif "plant_2" in cfg.data_dir:
-                        box_center = [-0.000, 0.000, 1.663]
-                        dimensions = (0.243, 0.243, 0.385)
-                        rotation_angles = (0,0,0)
-                    elif "plant_3" in cfg.data_dir:
-                        box_center = [-0.000, 0.000, 1.670]
-                        dimensions = (0.243, 0.243, 0.400)
-                        rotation_angles = (0,0,0)
-                    elif "plant_4" in cfg.data_dir:
-                        box_center = [-0.000, 0.000, 1.626]
-                        dimensions = (0.243, 0.243, 0.311)
-                        rotation_angles = (0,0,0)
-                    elif "plant_5" in cfg.data_dir:
-                        box_center = [-0.000, 0.000, 1.626]
-                        dimensions = (0.243, 0.243, 0.311)
-                        rotation_angles = (0,0,0)
-                    elif "rose" in cfg.data_dir:
-                        box_center = [-0.000, 0.000, 1.626]
-                        dimensions = (0.3, 0.3, 0.6)
-                        rotation_angles = (0,0,0)
-                        
-                    _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
+                if "clematis" in cfg.data_dir:
+                    box_center = [0.015, 0.000, 1.678]
+                    dimensions = (0.350, 0.3, 0.5)
+                    rotation_angles = (0, 0, 0)
+                    scene = "clematis"
+                elif "lily" in cfg.data_dir:
+                    box_center = [-0.005, -0.002, 1.678]
+                    dimensions = (0.30, 0.30, 0.43)
+                    rotation_angles = (0, 0, 0)
+                    scene = "lily"
+                elif "tulip" in cfg.data_dir:
+                    box_center = [0.007, -0.003968, 1.72722]
+                    dimensions = (0.32,0.2, 0.43)
+                    rotation_angles = (0, 0, 0)
+                    scene = "tulip"
+                elif "plant_1" in cfg.data_dir:
+                    box_center = [-0.000, 0.000, 1.615]
+                    dimensions = (0.243, 0.243, 0.290)
+                    rotation_angles = (0,0,0)
+                    scene = "plant_1"
+                elif "plant_2" in cfg.data_dir:
+                    box_center = [-0.000, 0.000, 1.663]
+                    dimensions = (0.243, 0.243, 0.385)
+                    rotation_angles = (0,0,0)
+                    scene = "plant_2"
+                elif "plant_3" in cfg.data_dir:
+                    box_center = [-0.000, 0.000, 1.670]
+                    dimensions = (0.243, 0.243, 0.400)
+                    rotation_angles = (0,0,0)
+                    scene ="plant_3"
+                elif "plant_4" in cfg.data_dir:
+                    box_center = [-0.000, 0.000, 1.626]
+                    dimensions = (0.243, 0.243, 0.311)
+                    rotation_angles = (0,0,0)
+                    scene = "plant_4"
+                elif "plant_5" in cfg.data_dir:
+                    box_center = [-0.000, 0.000, 1.626]
+                    dimensions = (0.243, 0.243, 0.311)
+                    rotation_angles = (0,0,0)
+                    scene = "plant_5"
+                elif "rose" in cfg.data_dir:
+                    box_center = [-0.000, 0.000, 1.626]
+                    dimensions = (0.3, 0.3, 0.6)
+                    rotation_angles = (0,0,0)
+                    scene = "rose"
+                    
+                _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
                 # raster_params["opacities"] = raster_params["opacities"][bounding_box_mask]
                 # raster_params["colors"] = raster_params["colors"][bounding_box_mask]
                 print(f"using only {bounding_box_mask.sum()} gaussians")
