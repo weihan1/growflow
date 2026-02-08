@@ -41,7 +41,6 @@ pip install -r requirements.txt
 ```
 pip install -r requirements_no_iso.txt --no-build-isolation
 ```
-NOTE: if you encounter issues with `torch not found`, try doing `pip install -r requirements.txt --no-build-isolation`
 
 
 ## Dataset and checkpoints

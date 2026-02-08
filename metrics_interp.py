@@ -584,7 +584,6 @@ def evaluate(cfg, data_dir, method_paths, output_path, split="test"):
 def process_scene(scene):
     data_dir = gt_data_dir[scene]
     print(f"getting all results for scene {scene}")
-    cfg.task_name = "interpolation"
     method_paths = []
 
     #Always append ours first
