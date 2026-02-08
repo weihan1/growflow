@@ -611,63 +611,62 @@ class Evaluator(BaseEngine):
             print("rendering test images")
             test_eval_path = os.path.join(full_eval_path, "test")
             raster_params = get_raster_params_blender(cfg, self.gaussians.splats, self.testset, self.gaussians.deformed_params_dict)
-            if cfg.render_foreground: #only input the foreground gaussians
-                if cfg.bkgd_color == [1,1,1]: #white background
-                    test_eval_path = os.path.join(full_eval_path, "test_white") 
-                else:
-                    test_eval_path = os.path.join(full_eval_path, "test_masked")
-                means_t0 = fixed_init_params[:, :3]
-                assert cfg.learn_masks ^ cfg.use_bounding_box, "can only learn masks or use bounding box"
-                if "clematis" in cfg.data_dir:
-                    box_center = [0.015, 0.000, 1.678]
-                    dimensions = (0.350, 0.3, 0.5)
-                    rotation_angles = (0, 0, 0)
-                    scene = "clematis"
-                elif "lily" in cfg.data_dir:
-                    box_center = [-0.005, -0.002, 1.678]
-                    dimensions = (0.30, 0.30, 0.43)
-                    rotation_angles = (0, 0, 0)
-                    scene = "lily"
-                elif "tulip" in cfg.data_dir:
-                    box_center = [0.007, -0.003968, 1.72722]
-                    dimensions = (0.32,0.2, 0.43)
-                    rotation_angles = (0, 0, 0)
-                    scene = "tulip"
-                elif "plant_1" in cfg.data_dir:
-                    box_center = [-0.000, 0.000, 1.615]
-                    dimensions = (0.243, 0.243, 0.290)
-                    rotation_angles = (0,0,0)
-                    scene = "plant_1"
-                elif "plant_2" in cfg.data_dir:
-                    box_center = [-0.000, 0.000, 1.663]
-                    dimensions = (0.243, 0.243, 0.385)
-                    rotation_angles = (0,0,0)
-                    scene = "plant_2"
-                elif "plant_3" in cfg.data_dir:
-                    box_center = [-0.000, 0.000, 1.670]
-                    dimensions = (0.243, 0.243, 0.400)
-                    rotation_angles = (0,0,0)
-                    scene ="plant_3"
-                elif "plant_4" in cfg.data_dir:
-                    box_center = [-0.000, 0.000, 1.626]
-                    dimensions = (0.243, 0.243, 0.311)
-                    rotation_angles = (0,0,0)
-                    scene = "plant_4"
-                elif "plant_5" in cfg.data_dir:
-                    box_center = [-0.000, 0.000, 1.626]
-                    dimensions = (0.243, 0.243, 0.311)
-                    rotation_angles = (0,0,0)
-                    scene = "plant_5"
-                elif "rose" in cfg.data_dir:
-                    box_center = [-0.000, 0.000, 1.626]
-                    dimensions = (0.3, 0.3, 0.6)
-                    rotation_angles = (0,0,0)
-                    scene = "rose"
-                    
-                _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
-                # raster_params["opacities"] = raster_params["opacities"][bounding_box_mask]
-                # raster_params["colors"] = raster_params["colors"][bounding_box_mask]
-                print(f"using only {bounding_box_mask.sum()} gaussians")
+            if cfg.bkgd_color == [1,1,1]: #white background
+                test_eval_path = os.path.join(full_eval_path, "test_white") 
+            else:
+                test_eval_path = os.path.join(full_eval_path, "test_masked")
+            means_t0 = fixed_init_params[:, :3]
+            assert cfg.learn_masks ^ cfg.use_bounding_box, "can only learn masks or use bounding box"
+            if "clematis" in cfg.data_dir:
+                box_center = [0.015, 0.000, 1.678]
+                dimensions = (0.350, 0.3, 0.5)
+                rotation_angles = (0, 0, 0)
+                scene = "clematis"
+            elif "lily" in cfg.data_dir:
+                box_center = [-0.005, -0.002, 1.678]
+                dimensions = (0.30, 0.30, 0.43)
+                rotation_angles = (0, 0, 0)
+                scene = "lily"
+            elif "tulip" in cfg.data_dir:
+                box_center = [0.007, -0.003968, 1.72722]
+                dimensions = (0.32,0.2, 0.43)
+                rotation_angles = (0, 0, 0)
+                scene = "tulip"
+            elif "plant_1" in cfg.data_dir:
+                box_center = [-0.000, 0.000, 1.615]
+                dimensions = (0.243, 0.243, 0.290)
+                rotation_angles = (0,0,0)
+                scene = "plant_1"
+            elif "plant_2" in cfg.data_dir:
+                box_center = [-0.000, 0.000, 1.663]
+                dimensions = (0.243, 0.243, 0.385)
+                rotation_angles = (0,0,0)
+                scene = "plant_2"
+            elif "plant_3" in cfg.data_dir:
+                box_center = [-0.000, 0.000, 1.670]
+                dimensions = (0.243, 0.243, 0.400)
+                rotation_angles = (0,0,0)
+                scene ="plant_3"
+            elif "plant_4" in cfg.data_dir:
+                box_center = [-0.000, 0.000, 1.626]
+                dimensions = (0.243, 0.243, 0.311)
+                rotation_angles = (0,0,0)
+                scene = "plant_4"
+            elif "plant_5" in cfg.data_dir:
+                box_center = [-0.000, 0.000, 1.626]
+                dimensions = (0.243, 0.243, 0.311)
+                rotation_angles = (0,0,0)
+                scene = "plant_5"
+            elif "rose" in cfg.data_dir:
+                box_center = [-0.000, 0.000, 1.626]
+                dimensions = (0.3, 0.3, 0.6)
+                rotation_angles = (0,0,0)
+                scene = "rose"
+                
+            _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
+            # raster_params["opacities"] = raster_params["opacities"][bounding_box_mask]
+            # raster_params["colors"] = raster_params["colors"][bounding_box_mask]
+            print(f"using only {bounding_box_mask.sum()} gaussians")
 
             os.makedirs(test_eval_path, exist_ok=True)
             if num_timesteps is None:
@@ -719,7 +718,6 @@ class Evaluator(BaseEngine):
             colors = torch.clamp(out_img, 0.0, 1.0)
             image_colors = colors
             eval_colors = colors
-            # torch.save(pred_param,"/scratch/ondemand28/weihanluo/neural_ode_splatting/results/tulip_transparent_final_small_vase_70_timesteps/final_subsample_6/pred_param.pt")
             #NOTE: we load these gt tracks regardless of whether we render them.
             #Code is taken from https://github.com/momentum-robotics-lab/deformgs
             # assert cfg.track_path != "", "please specify a valid track_path"
@@ -963,7 +961,6 @@ class Evaluator(BaseEngine):
             gt_images = gt_images.to(device)
             raster_params["viewmats"] = c2ws.to(device) #when we rasterize we need to invert this!
 
-            scene = cfg.data_dir.split("/")[-1].split("_transparent_final")[0]
             gt_tracks_path = os.path.join(cfg.data_dir, "meshes", f"relevant_{scene}_meshes", "trajectory_frames.npz")
             gt_idxs = None
             gt_tracks = np.load(gt_tracks_path)
