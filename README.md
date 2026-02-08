@@ -101,7 +101,7 @@ python generate_trajectory.py default --data-dir <your_data_dir> --static-ckpt <
 python generate_trajectory_captured.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_static_stage> --no-adjoint --subsample-factor <desired_subsample_factor>
 ```
 
-NOTE: In the paper, for the rose scene, `desired_subsample_factor=17` and for the corn scene, `desired_subsample_factor=10`. You can also choose your own subsample_factor, however, if it's not a divisor of the total number of timesteps, you need to add the `--include-end` flag.
+NOTE: In the paper, for the rose scene, `desired_subsample_factor=17` and for the corn scene, `desired_subsample_factor=10`. You can also choose your own subsample_factor, however, if it's not a divisor of the total number of timesteps, you need to add the `--include-end` flag. For the paperwhite scene, use the flag `--encoding freq` throughout.
 
 ### Global optimization stage
 **Synthetic:** 
@@ -125,7 +125,6 @@ python full_render.py --data-dir <your_data_dir> --dynamic-ckpt <your_final_chec
 ```bash
 python full_render_captured.py --data-dir <your_data_dir> --dynamic-ckpt <your_final_checkpoint_from_global>
 ```
-NOTE: for the `pi_paperwhite_full_subset4` scene, use the flag `--encoding freq` as this scene is trained with MLP instead of Hexplane.
 
 ### Metrics 
 NOTE: You can only run the metrics code after running the eval code.
