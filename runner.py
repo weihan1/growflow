@@ -33,17 +33,14 @@ class Runner:
             if checkpoint_path:
                 cfg.result_dir = checkpoint_path.split('/ckpts/')[0]  #Assume the checkpoints are always contained in the ckpts folder.
 
-            elif cfg.per_time_upper_bound is not None:  #NOTE: if per timestep static ckpt dir 
-                scene = cfg.data_dir.split("/")[-1] #scene is always after the last /
-                # cfg.result_dir = f"{cfg.result_dir}_{now}"
-                if cfg.result_dir == "":
-                    cfg.result_dir = f"./results/{scene}/per_timestep_static_{cfg.per_time_upper_bound}"
-                os.makedirs(f"{cfg.result_dir}", exist_ok=True)
             
             else:
                 # Where to dump results.
-                scene = cfg.data_dir.split("/")[-1] #scene is always after the last /
-                # cfg.result_dir = f"{cfg.result_dir}_{now}"
+                scene = cfg.data_dir.split("/")[-1]
+                for option in ["clematis", "plant_1", "plant_2", "plant_3", "plant_4", "plant_5", "tulip", "pi_rose", "pi_corn_full_subset4"]:
+                    if option in cfg.data_dir:
+                        scene = option
+                        break
                 cfg.result_dir = f"./results/{scene}/{unique_str}_{now}"
                 os.makedirs(f"{cfg.result_dir}", exist_ok=True)
                 # Setup output directories.
