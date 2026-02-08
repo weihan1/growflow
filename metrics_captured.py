@@ -427,8 +427,8 @@ if __name__ == "__main__":
     }
 
     our_test_folders = {
-        "pi_corn_full_subset4": "./results/pi_corn_full_subset4/full_eval/test",
-        "pi_rose": "./results/pi_rose/full_eval/test",
+        "pi_corn_full_subset4": "./results/pi_corn_full_subset4/final/full_eval/test",
+        "pi_rose": "./results/pi_rose/final/full_eval/test",
     }
 
     for scene in ["pi_corn_full_subset4", "pi_rose"]:

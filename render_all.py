@@ -30,16 +30,16 @@ def main():
     
     commands = [
         #synth experiments
-        "python full_render.py --dynamic-ckpt ./results/clematis/ckpts/neural_ode_29999.pt --data-dir ./data/synthetic/clematis_transparent_final_small_vase_70_timesteps_subsample_6",
-        "python full_render.py --dynamic-ckpt ./results/tulip/ckpts/neural_ode_29999.pt --data-dir ./data/synthetic/tulip_transparent_final_small_vase_70_timesteps_subsample_6",
-        "python full_render.py --dynamic-ckpt ./results/plant_1/ckpts/neural_ode_29999.pt --data-dir ./data/synthetic/plant_1_transparent_final_small_vase_70_timesteps_subsample_6",
-        "python full_render.py --dynamic-ckpt ./results/plant_2/ckpts/neural_ode_29999.pt --data-dir ./data/synthetic/plant_2_transparent_final_small_vase_70_timesteps_subsample_6",
-        "python full_render.py --dynamic-ckpt ./results/plant_3/ckpts/neural_ode_29999.pt --data-dir ./data/synthetic/plant_3_transparent_final_small_vase_70_timesteps_subsample_6",
-        "python full_render.py --dynamic-ckpt ./results/plant_4/ckpts/neural_ode_29999.pt --data-dir ./data/synthetic/plant_4_transparent_final_small_vase_70_timesteps_subsample_6",
-        "python full_render.py --dynamic-ckpt ./results/plant_5/ckpts/neural_ode_29999.pt --data-dir ./data/synthetic/plant_5_transparent_final_small_vase_70_timesteps_subsample_6",
+        "python full_render.py --dynamic-ckpt ./results/clematis/final/ckpts/neural_ode_29999.pt --data-dir ./data/synthetic/clematis_transparent_final_small_vase_70_timesteps_subsample_6",
+        "python full_render.py --dynamic-ckpt ./results/tulip/final/ckpts/neural_ode_29999.pt --data-dir ./data/synthetic/tulip_transparent_final_small_vase_70_timesteps_subsample_6",
+        "python full_render.py --dynamic-ckpt ./results/plant_1/final/ckpts/neural_ode_29999.pt --data-dir ./data/synthetic/plant_1_transparent_final_small_vase_70_timesteps_subsample_6",
+        "python full_render.py --dynamic-ckpt ./results/plant_2/final/ckpts/neural_ode_29999.pt --data-dir ./data/synthetic/plant_2_transparent_final_small_vase_70_timesteps_subsample_6",
+        "python full_render.py --dynamic-ckpt ./results/plant_3/final/ckpts/neural_ode_29999.pt --data-dir ./data/synthetic/plant_3_transparent_final_small_vase_70_timesteps_subsample_6",
+        "python full_render.py --dynamic-ckpt ./results/plant_4/final/ckpts/neural_ode_29999.pt --data-dir ./data/synthetic/plant_4_transparent_final_small_vase_70_timesteps_subsample_6",
+        "python full_render.py --dynamic-ckpt ./results/plant_5/final/ckpts/neural_ode_29999.pt --data-dir ./data/synthetic/plant_5_transparent_final_small_vase_70_timesteps_subsample_6",
         #captured experiments
-        "python full_render_captured.py --dynamic-ckpt ./results/pi_corn_full_subset4/ckpts/neural_ode_29999.pt --data-dir /scratch/ondemand28/weihanluo/growflow/data/captured/pi_corn_full_subset4",
-        "python full_render_captured.py --dynamic-ckpt ./results/pi_rose/ckpts/neural_ode_29999.pt --data-dir /scratch/ondemand28/weihanluo/growflow/data/captured/pi_rose"
+        "python full_render_captured.py --dynamic-ckpt ./results/pi_corn_full_subset4/final/ckpts/neural_ode_29999.pt --data-dir /scratch/ondemand28/weihanluo/growflow/data/captured/pi_corn_full_subset4",
+        "python full_render_captured.py --dynamic-ckpt ./results/pi_rose/final/ckpts/neural_ode_29999.pt --data-dir /scratch/ondemand28/weihanluo/growflow/data/captured/pi_rose"
     ]
     
     print(f"{datetime.now()}: Starting parallel rendering jobs...")

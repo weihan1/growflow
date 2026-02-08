@@ -762,13 +762,13 @@ if __name__ == "__main__":
     }
 
     our_test_folders = {
-        "clematis_transparent_final_small_vase_70_timesteps_subsample_6": "./results/clematis/full_eval/test_masked",
-        "tulip_transparent_final_small_vase_70_timesteps_subsample_6": "./results/tulip/full_eval/test_masked",
-        "plant_1_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_1/full_eval/test_masked",
-        "plant_2_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_2/full_eval/test_masked",
-        "plant_3_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_3/full_eval/test_masked",
-        "plant_4_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_4/full_eval/test_masked",
-        "plant_5_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_5/full_eval/test_masked",
+        "clematis_transparent_final_small_vase_70_timesteps_subsample_6": "./results/clematis/final/full_eval/test_masked",
+        "tulip_transparent_final_small_vase_70_timesteps_subsample_6": "./results/tulip/final/full_eval/test_masked",
+        "plant_1_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_1/final/full_eval/test_masked",
+        "plant_2_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_2/final/full_eval/test_masked",
+        "plant_3_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_3/final/full_eval/test_masked",
+        "plant_4_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_4/final/full_eval/test_masked",
+        "plant_5_transparent_final_small_vase_70_timesteps_subsample_6": "./results/plant_5/final/full_eval/test_masked",
 
     }
         
