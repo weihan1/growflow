@@ -510,25 +510,25 @@ class Trainer(BaseEngine):
 
         if cfg.use_bounding_box:
             number_of_times = len(self.trainset.parser.timestep_data)
-            if scene == "pi_corn_full_subset4":
+            if "pi_corn_full_subset4" in cfg.data_dir:
                 box_center = [0.093149, 0.148414, -0.293219]
                 dimensions = [0.2, 0.2, 0.6]
                 rotation_angles = (30, 0, 0)
                 _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
 
-            elif scene == "pi_rose":
+            elif "pi_rose" in cfg.data_dir:
                 box_center = [-0.155161,-0.007581,-0.119393]
                 dimensions = (0.2, 0.2 , 0.2)
                 rotation_angles = (0,60,0)
                 _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
             
-            elif scene == "pi_orchid":
+            elif "pi_orchid" in cfg.data_dir:
                 box_center = [-0.144109, 0.100165, -0.071987]
                 dimensions = (0.324, 0.324,0.204)
                 rotation_angles = (0,0,0)
                 _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
 
-            elif scene == "pi_bean_final":
+            elif "pi_bean_final" in cfg.data_dir:
                 box_center = [-0.305955, 0.092958, 0.317707]
                 dimensions = (0.3, 0.3,0.9)
                 rotation_angles = (0,-50,0)
@@ -952,23 +952,23 @@ class Trainer(BaseEngine):
             assert sum([cfg.use_bounding_box, cfg.use_mask_proj]) <= 1, "Either use bounding box or mask proj or neither"
             if cfg.use_bounding_box:
                 number_of_times = len(self.trainset.parser.timestep_data)
-                if scene == "pi_corn_full_subset4":
+                if "pi_corn_full_subset4" in cfg.data_dir:
                     box_center = [0.093149, 0.148414, -0.293219]
                     dimensions = [0.2, 0.2, 0.6]
                     rotation_angles = (30, 0, 0)
                     _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
-                elif scene == "pi_rose":
+                elif "pi_rose" in cfg.data_dir:
                     box_center = [0.191764, -0.100207, 0.248342]
                     box_center = [-0.155161,-0.007581,-0.119393]
                     dimensions = (0.2, 0.2 , 0.2)
                     rotation_angles = (0,60,0)
                     _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
-                elif scene == "pi_orchid":
+                elif "pi_orchid" in cfg.data_dir:
                     box_center = [-0.144109, 0.100165, -0.071987]
                     dimensions = (0.324, 0.324,0.204)
                     rotation_angles = (0,0,0)
                     _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
-                elif scene == "pi_bean_final":
+                elif "pi_bean_final" in cfg.data_dir:
                     box_center = [-0.305955, 0.092958, 0.317707]
                     dimensions = (0.3, 0.3,0.9)
                     rotation_angles = (0,-50,0)
@@ -992,43 +992,43 @@ class Trainer(BaseEngine):
                     bounding_box_mask = (masks_ind > cfg.mask_threshold).squeeze()
                 elif cfg.use_bounding_box: 
                     means_t0 = self.gaussians.splats.means
-                    if "clematis" in scene:
+                    if "clematis" in cfg.data_dir:
                         box_center = [0.015, 0.000, 1.678]
                         dimensions = (0.350, 0.3, 0.5)
                         rotation_angles = (0, 0, 0)
-                    elif "lily" in scene:
+                    elif "lily" in cfg.data_dir:
                         box_center = [-0.005, -0.002, 1.678]
                         dimensions = (0.30, 0.30, 0.43)
                         rotation_angles = (0, 0, 0)
-                    elif "tulip" in scene:
+                    elif "tulip" in cfg.data_dir:
                         box_center = [0.007, -0.003968, 1.72722]
                         dimensions = (0.32,0.2, 0.43)
                         rotation_angles = (0, 0, 0)
-                    elif "plant_1" in scene:
+                    elif "plant_1" in cfg.data_dir:
                         box_center = [-0.000, 0.000, 1.615]
                         dimensions = (0.243, 0.243, 0.290)
                         rotation_angles = (0,0,0)
-                    elif "plant_2" in scene:
+                    elif "plant_2" in cfg.data_dir:
                         box_center = [-0.000, 0.000, 1.663]
                         dimensions = (0.243, 0.243, 0.385)
                         rotation_angles = (0,0,0)
-                    elif "plant_3" in scene:
+                    elif "plant_3" in cfg.data_dir:
                         box_center = [-0.000, 0.000, 1.670]
                         dimensions = (0.243, 0.243, 0.400)
                         rotation_angles = (0,0,0)
-                    elif "plant_4" in scene:
+                    elif "plant_4" in cfg.data_dir:
                         box_center = [-0.000, 0.000, 1.626]
                         dimensions = (0.243, 0.243, 0.311)
                         rotation_angles = (0,0,0)
-                    elif "plant_5" in scene:
+                    elif "plant_5" in cfg.data_dir:
                         box_center = [-0.000, 0.000, 1.626]
                         dimensions = (0.243, 0.243, 0.311)
                         rotation_angles = (0,0,0)
-                    elif "peony" in scene:
+                    elif "peony" in cfg.data_dir:
                         box_center = [-0.000, 0.000, 1.626]
                         dimensions = (0.3, 0.3, 0.4)
                         rotation_angles = (0,0,0)
-                    elif "rose" in scene:
+                    elif "rose" in cfg.data_dir:
                         box_center = [-0.000, 0.000, 1.626]
                         dimensions = (0.3, 0.3, 0.6)
                         rotation_angles = (0,0,0)
@@ -1361,39 +1361,39 @@ class Trainer(BaseEngine):
 
         scene = cfg.data_dir.split("/")[-1]
         means_t0 = self.gaussians.splats.means
-        if "clematis" in scene:
+        if "clematis" in cfg.data_dir:
             box_center = [0.015, 0.000, 1.678]
             dimensions = (0.350, 0.3, 0.5)
             rotation_angles = (0, 0, 0)
-        elif "lily" in scene:
+        elif "lily" in cfg.data_dir:
             box_center = [-0.005, -0.002, 1.678]
             dimensions = (0.30, 0.30, 0.43)
             rotation_angles = (0, 0, 0)
-        elif "tulip" in scene:
+        elif "tulip" in cfg.data_dir:
             box_center = [0.007, -0.003968, 1.72722]
             dimensions = (0.32,0.2, 0.43)
             rotation_angles = (0, 0, 0)
-        elif "plant_1" in scene:
+        elif "plant_1" in cfg.data_dir:
             box_center = [-0.000, 0.000, 1.615]
             dimensions = (0.243, 0.243, 0.290)
             rotation_angles = (0,0,0)
-        elif "plant_2" in scene:
+        elif "plant_2" in cfg.data_dir:
             box_center = [-0.000, 0.000, 1.663]
             dimensions = (0.243, 0.243, 0.385)
             rotation_angles = (0,0,0)
-        elif "plant_3" in scene:
+        elif "plant_3" in cfg.data_dir:
             box_center = [-0.000, 0.000, 1.670]
             dimensions = (0.243, 0.243, 0.400)
             rotation_angles = (0,0,0)
-        elif "plant_4" in scene:
+        elif "plant_4" in cfg.data_dir:
             box_center = [-0.000, 0.000, 1.626]
             dimensions = (0.243, 0.243, 0.311)
             rotation_angles = (0,0,0)
-        elif "plant_5" in scene:
+        elif "plant_5" in cfg.data_dir:
             box_center = [-0.000, 0.000, 1.626]
             dimensions = (0.243, 0.243, 0.311)
             rotation_angles = (0,0,0)
-        elif "peony" in scene:
+        elif "peony" in cfg.data_dir:
             box_center = [-0.000, 0.000, 1.626]
             dimensions = (0.3, 0.3, 0.4)
             rotation_angles = (0,0,0)

@@ -704,39 +704,39 @@ class Evaluator(BaseEngine):
                     masks_ind = torch.sigmoid(self.gaussians.splats["masks"])
                     bounding_box_mask = (masks_ind > cfg.mask_threshold).squeeze()
                 elif cfg.use_bounding_box:
-                    if "clematis" in scene:
+                    if "clematis" in cfg.data_dir:
                         box_center = [0.015, 0.000, 1.678]
                         dimensions = (0.350, 0.3, 0.5)
                         rotation_angles = (0, 0, 0)
-                    elif "lily" in scene:
+                    elif "lily" in cfg.data_dir:
                         box_center = [-0.005, -0.002, 1.678]
                         dimensions = (0.30, 0.30, 0.43)
                         rotation_angles = (0, 0, 0)
-                    elif "tulip" in scene:
+                    elif "tulip" in cfg.data_dir:
                         box_center = [0.007, -0.003968, 1.72722]
                         dimensions = (0.32,0.2, 0.43)
                         rotation_angles = (0, 0, 0)
-                    elif "plant_1" in scene:
+                    elif "plant_1" in cfg.data_dir:
                         box_center = [-0.000, 0.000, 1.615]
                         dimensions = (0.243, 0.243, 0.290)
                         rotation_angles = (0,0,0)
-                    elif "plant_2" in scene:
+                    elif "plant_2" in cfg.data_dir:
                         box_center = [-0.000, 0.000, 1.663]
                         dimensions = (0.243, 0.243, 0.385)
                         rotation_angles = (0,0,0)
-                    elif "plant_3" in scene:
+                    elif "plant_3" in cfg.data_dir:
                         box_center = [-0.000, 0.000, 1.670]
                         dimensions = (0.243, 0.243, 0.400)
                         rotation_angles = (0,0,0)
-                    elif "plant_4" in scene:
+                    elif "plant_4" in cfg.data_dir:
                         box_center = [-0.000, 0.000, 1.626]
                         dimensions = (0.243, 0.243, 0.311)
                         rotation_angles = (0,0,0)
-                    elif "plant_5" in scene:
+                    elif "plant_5" in cfg.data_dir:
                         box_center = [-0.000, 0.000, 1.626]
                         dimensions = (0.243, 0.243, 0.311)
                         rotation_angles = (0,0,0)
-                    elif "rose" in scene:
+                    elif "rose" in cfg.data_dir:
                         box_center = [-0.000, 0.000, 1.626]
                         dimensions = (0.3, 0.3, 0.6)
                         rotation_angles = (0,0,0)
@@ -1146,12 +1146,12 @@ class Evaluator(BaseEngine):
         means_t0 = fixed_init_params[...,:3]
         scene = cfg.data_dir.split("/")[-1]
         if cfg.use_bounding_box: #we need to mask the gaussians at inference too
-            if scene == "pi_rose":
+            if "pi_rose" in cfg.data_dir:
                 box_center = [-0.155161,-0.007581,-0.119393]
                 dimensions = (0.2, 0.2 , 0.2)
                 rotation_angles = (0,60,0)
                 _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
-            elif scene == "pi_corn_full_subset4":
+            elif "pi_corn_full_subset4" in cfg.data_dir:
                 box_center = [0.093149, 0.148414, -0.293219]
                 dimensions = [0.2, 0.2, 0.6]
                 rotation_angles = (30, 0, 0)
