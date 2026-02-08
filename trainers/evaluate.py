@@ -587,91 +587,6 @@ class Evaluator(BaseEngine):
         with open(f"{self.stats_dir_dynamic}/test_dynamic_step{step:04d}.json", "w") as f:
             json.dump(stats, f)
 
-    @torch.no_grad()
-    def dynamic_render_traj(self, fixed_init_params:torch.Tensor, step:int, num_timesteps=35):
-        """
-        Render NVS and render point cloud trajectory.
-        Works best if num_timesteps == length of the rendered trajectory.
-        """
-        print(f"Running dynamical trajectory rendering with {num_timesteps} timesteps")
-        cfg = self.cfg
-        device = self.device
-        camtoworlds_all = generate_360_path(num_timesteps).to(device)
-        raster_params = get_raster_params_blender(cfg, self.gaussians.splats, self.testset, self.gaussians.deformed_params_dict)
-        #overwrite intrinsics to match the same number as number of viewmats
-        raster_params["Ks"] = raster_params["Ks"][0].repeat(camtoworlds_all.shape[0],1,1)
-        raster_params["viewmats"] = camtoworlds_all.to("cuda")
-        num_cameras = raster_params["viewmats"].shape[0]
-        #render 360 viz
-        int_t = torch.arange(0, num_timesteps) #integer times from 0 to number of images, for indexing
-        inp_t = int_t/(num_timesteps-1) #continuous times from 0 to 1 for integration
-        pred_param = self.dynamical_model(fixed_init_params, inp_t) #(T, N_gaussians, feat_dim) 
-        w = raster_params["width"]
-        h = raster_params["height"]
-
-        out_img, _ = self.gaussians.rasterize_with_dynamic_params(pred_param, raster_params, activate_params=True) 
-        
-        if cfg.is_reverse:
-            out_img = out_img.flip(1) #flip along time if video is reverse
-
-        #Calculate the closest cameras and times
-        int_training_times = torch.arange(0, self.trainset.num_timesteps()-1)
-        cont_train_times = int_training_times/(self.trainset.num_timesteps())
-        indices = torch.argmin(torch.abs(inp_t[:, None] - cont_train_times[None, :]), dim=1)
-        closest_times = cont_train_times[indices]
-        int_closest_times = (closest_times*self.trainset.num_timesteps()).to(torch.int) #integer closest timesteps
-
-        closest_train_camera_indices = []
-        all_training_cameras = list(self.trainset.cam_to_worlds_dict.values())  # Extract all camera matrices
-        all_training_camera_ids = list(self.trainset.cam_to_worlds_dict.keys())  # Corresponding IDs
-        train_cam_positions = torch.stack([v[:3, 3] for v in all_training_cameras])  # Extract translation vectors
-
-        for target_cam in raster_params["viewmats"]:
-            target_position = target_cam[:3, 3].cpu()  # Extract translation component
-
-            # Compute L2 distances to all training cameras
-            distances = torch.norm(train_cam_positions - target_position, dim=1)
-
-            # Find the index of the closest training camera
-            closest_idx = torch.argmin(distances)
-
-            # Store the closest camera ID
-            closest_train_camera_indices.append(all_training_camera_ids[closest_idx])
-
-        #Get the gt_images for each of pairs of (int_closest_time[i], closest_train_camera_indices)
-        video_dir = f"{cfg.result_dir}/renders/dynamic"
-        closest_images = []
-        for i in (int_closest_times):
-            gt_image = self.trainset[i]["image"][closest_train_camera_indices[i]]
-            closest_images.append((gt_image.cpu().numpy()*255).astype(np.uint8))
-        if cfg.is_reverse:
-            closest_images = closest_images[::-1]
-        imageio.mimwrite(
-            f"{video_dir}/traj360_closest.mp4",
-            closest_images,
-            fps = len(closest_images)/cfg.video_duration
-        )
-
-        #Select the "diagonal" of out_img
-        diagonal_frames = torch.stack([out_img[i, i] for i in range(min(num_cameras, num_timesteps))])
-        out_img = (diagonal_frames.cpu().numpy() * 255).astype(np.uint8)
-        imageio.mimwrite(
-            f"{video_dir}/traj360.mp4",
-            out_img,
-            fps = out_img.shape[0]/cfg.video_duration
-        )
-        #Save the point cloud trajectory of only "visible" points. those whose sigmoid(opacities)>threshold
-        threshold = 0.3 
-        above_threshold_mask = (torch.sigmoid(raster_params["opacities"]) > threshold) #(N)
-        visible_points = pred_param[..., 0:3][:, above_threshold_mask, :]
-        # for t in range(visible_points.shape[0]):
-        #     convex_hull = ConvexHull(visible_points[t].cpu().numpy())
-        #     print(convex_hull.volume)
-        torch.save(visible_points, f"{cfg.result_dir}/point_cloud_trajectory.pt")
-        # visualize_point_clouds(point_clouds[0])
-        print("Rendering the point cloud animation")
-        animate_point_clouds(visible_points.cpu(), output_file=f"{cfg.result_dir}/point_cloud_animation.mp4",
-                             is_reverse=cfg.is_reverse, t_subsample=1)
 
     @torch.no_grad()
     def full_dynamic_eval(self, fixed_init_params: torch.Tensor, step:int, num_timesteps=None, animate_pc:bool=False, offset:int=0, skip_init=False):
@@ -1093,18 +1008,6 @@ class Evaluator(BaseEngine):
                 pixel_coords[:, 1] = torch.clamp(pixel_coords[:, 1], 0, 399)  # y coordinates
                 closest_pixels = view_image[pixel_coords[:, 1], pixel_coords[:, 0]]  # Shape: (N, 3)
 
-                #NOTE: use below for debugging
-                # overlay_image = view_image.clone()
-
-                # # Set pixel values directly (single pixel per point)
-                # overlay_image[pixel_coords[:, 1], pixel_coords[:, 0]] = torch.tensor([1.0, 0.0, 0.0], device=view_image.device)  # Red points
-
-                # # Visualize the result
-                # plt.figure(figsize=(10, 10))
-                # plt.imshow(overlay_image.cpu().numpy())
-                # plt.title('Point Cloud Overlay')
-                # plt.axis('off')
-                # plt.savefig("pc_overlay.png")
 
                 animate_point_clouds(
                     visible_points,

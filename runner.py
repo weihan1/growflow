@@ -434,7 +434,6 @@ class Runner:
             elif cfg.data_type == "colmap":
                 raise NotImplementedError #need to add the bounding box and stuff.
                 self.evaluator.dynamic_eval_captured(init_params, step=step)
-            # self.evaluator.dynamic_render_traj(init_params, step=step) #for fun
 
 
     def full_eval(self):
