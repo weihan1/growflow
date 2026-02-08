@@ -49,8 +49,9 @@ To download the dataset, run `python download_data.py`
 The dataset structure is 
 ```
 ├── captured
-│   ├── pi_corn_full_subset4
-│   └── pi_rose
+│   ├── pi_corn_full_subset4
+│   ├── pi_paperwhite_full_subset4
+│   └── pi_rose
 └── synthetic
     ├── clematis_subsample_6
     ├── plant_1_subsample_6
@@ -100,7 +101,7 @@ python generate_trajectory.py default --data-dir <your_data_dir> --static-ckpt <
 python generate_trajectory_captured.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_static_stage> --no-adjoint --subsample-factor <desired_subsample_factor>
 ```
 
-NOTE: In the paper, for the rose scene, `desired_subsample_factor=17` and for the corn scene, `desired_subsample_factor=10`. You can also choose your own subsample_factor, however, if it's not a divisor of the total number of timesteps, you need to the `--include-end` flag.
+NOTE: In the paper, for the rose scene, `desired_subsample_factor=17` and for the corn scene, `desired_subsample_factor=10`. You can also choose your own subsample_factor, however, if it's not a divisor of the total number of timesteps, you need to add the `--include-end` flag.
 
 ### Global optimization stage
 **Synthetic:** 
