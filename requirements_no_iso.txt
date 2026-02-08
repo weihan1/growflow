@@ -1,0 +1,6 @@
+git+https://github.com/rmbrualla/pycolmap@cc7ea4b7301720ac29287dbe450952511b32125e
+git+https://github.com/nerfstudio-project/gsplat.git
+git+https://github.com/rahul-goel/fused-ssim@1272e21a282342e89537159e4bad508b19b34157
+git+https://github.com/harry7557558/fused-bilagrid@90f9788e57d3545e3a033c1038bb9986549632fe
+git+https://github.com/facebookresearch/pytorch3d.git@stable
+git+https://github.com/otaheri/chamfer_distance

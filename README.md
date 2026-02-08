@@ -32,10 +32,14 @@ conda create -yn grow_env python=3.10.8
 conda activate grow_env
 ```
 3. Additionally please install PyTorch from (https://pytorch.org/get-started/previous-versions/).
-4. Install the requirements file with 
+4. Install the first set of requirements file with 
 
 ```
 pip install -r requirements.txt
+```
+5. Install the second set with
+```
+pip install -r requirements_no_iso.txt --no-build-isolation
 ```
 NOTE: if you encounter issues with `torch not found`, try doing `pip install -r requirements.txt --no-build-isolation`
 
