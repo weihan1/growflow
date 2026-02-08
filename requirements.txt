@@ -24,3 +24,5 @@ splines
 nerfview
 cmocean
 seaborn
+git+https://github.com/facebookresearch/pytorch3d.git@stable
+git+https://github.com/otaheri/chamfer_distance
