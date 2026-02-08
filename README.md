@@ -63,11 +63,11 @@ NOTE: the synthetic datasets are already subsampled with interpolation factor 6,
 To download the checkpoints, run `python download_checkpoints.py`
 The checkpoint structure is 
 ```
-|-- ckpts
-|   |-- gaussian_ckpt_29999_t0.pt
-|   `-- neural_ode_29999.pt
-`-- fixed_pc_traj
-    `-- full_traj_{some_number}.npy
+├── ckpts
+│   ├── gaussian_ckpt_29999_t0.pt
+│   └── neural_ode_29999.pt
+└── fixed_pc_traj
+    └── full_traj_{some_number}.npy
 ```
 `neural_ode_29999.pt` is the final neural ODE checkpoint, whereas `gaussian_ckpt_29999_t0.pt` and `full_traj_{some_number}.npy` are the cached Gaussians that you can use to directly train the neural ODE in the global optimization stage.
 
@@ -75,35 +75,65 @@ The checkpoint structure is
 ### Training 
 Our model is trained in 3 stages (see sect. 3.3 of paper), the static reconstruction stage, the boundary reconstruction stage, and the global optimization stage. 
 
-#### Static reconstruction stage 
-**Synthetic:** `python main_blender.py default --data-dir <your_data_dir>`
+### Static reconstruction stage 
+**Synthetic:** 
+```bash
+python main_blender.py default --data-dir <your_data_dir>
+```
 
-**Captured:** `python main_captured.py default --data-dir <your_data_dir>`
+**Captured:** 
+```bash
+python main_captured.py default --data-dir <your_data_dir>
+```
 
-#### Boundary reconstruction stage
-**Synthetic:** `python generate_trajectory.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_static_stage> --no-adjoint`
+### Boundary reconstruction stage
+**Synthetic:** 
+```bash
+python generate_trajectory.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_static_stage> --no-adjoint
+```
 
-**Captured:** `python generate_trajectory_captured.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_static_stage> --no-adjoint --subsample-factor <desired_subsample_factor>`
+**Captured:** 
+```bash
+python generate_trajectory_captured.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_static_stage> --no-adjoint --subsample-factor <desired_subsample_factor>
+```
 
 NOTE: In the paper, for the rose scene, `desired_subsample_factor=17` and for the corn scene, `desired_subsample_factor=10`. You can also choose your own subsample_factor, however, if it's not a divisor of the total number of timesteps, you need to the `--include-end` flag.
 
-#### Global optimization stage
-**Synthetic:** `python main_blender.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_static_stage> --full_trajectory_path <your_ckpt_from_boundary_stage> --rtol 1e-5 --atol 1e-6`
+### Global optimization stage
+**Synthetic:** 
+```bash
+python main_blender.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_static_stage> --full_trajectory_path <your_ckpt_from_boundary_stage> --rtol 1e-5 --atol 1e-6
+```
 
-**Captured:** `python main_captured.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_last_stage>  --unscaled-encoder-lr-init 5e-4 --subsample-factor <desired_subsample_factor>`
+**Captured:** 
+```bash
+python main_captured.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_last_stage>  --unscaled-encoder-lr-init 5e-4 --subsample-factor <desired_subsample_factor>
+```
 
 
 ### Evaluation
-**Synthetic:** `python full_render.py --data-dir <your_data_dir> --dynamic-ckpt <your_final_checkpoint_from_global>`
+**Synthetic:** 
+```bash
+python full_render.py --data-dir <your_data_dir> --dynamic-ckpt <your_final_checkpoint_from_global>
+```
 
-**Captured:** `python full_render_captured.py --data-dir <your_data_dir> --dynamic-ckpt <your_final_checkpoint_from_global>`
+**Captured:** 
+```bash
+python full_render_captured.py --data-dir <your_data_dir> --dynamic-ckpt <your_final_checkpoint_from_global>
+```
 
 ### Metrics 
 NOTE: You can only run the metrics code after running the eval code.
 
-**Synthetic:** `python metrics_interp.py --skip-dynamic3dgs --skip-4dgs --skip-4dgaussians`
+**Synthetic:** 
+```bash
+python metrics_interp.py --skip-dynamic3dgs --skip-4dgs --skip-4dgaussians
+```
 
-**Captured:** `python metrics_captured.py --skip-dynamic3dgs --skip-4dgs --skip-4dgaussians`
+**Captured:** 
+```bash
+python metrics_captured.py --skip-dynamic3dgs --skip-4dgs --skip-4dgaussians
+```
 
 
 ## Tips for training on custom data
