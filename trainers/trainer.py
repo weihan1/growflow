@@ -516,6 +516,12 @@ class Trainer(BaseEngine):
                 rotation_angles = (30, 0, 0)
                 _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
 
+            elif scene == "pi_paperwhite_full_subset4":
+                box_center = [0.4136, 0.13698, 0.089389]
+                dimensions = [0.9, 0.515, 0.7]
+                rotation_angles = (0, 0, 20)
+                _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
+
             elif "pi_rose" in cfg.data_dir:
                 box_center = [-0.155161,-0.007581,-0.119393]
                 dimensions = (0.2, 0.2 , 0.2)
@@ -956,6 +962,11 @@ class Trainer(BaseEngine):
                     box_center = [0.093149, 0.148414, -0.293219]
                     dimensions = [0.2, 0.2, 0.6]
                     rotation_angles = (30, 0, 0)
+                    _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
+                elif scene == "pi_paperwhite_full_subset4":
+                    box_center = [0.4136, 0.13698, 0.089389]
+                    dimensions = [0.9, 0.515, 0.7]
+                    rotation_angles = (0, 0, 20)
                     _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
                 elif "pi_rose" in cfg.data_dir:
                     box_center = [0.191764, -0.100207, 0.248342]

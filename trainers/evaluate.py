@@ -1059,6 +1059,11 @@ class Evaluator(BaseEngine):
                 dimensions = (0.2, 0.2 , 0.2)
                 rotation_angles = (0,60,0)
                 _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
+            elif scene == "pi_paperwhite_full_subset4":
+                box_center = [0.4136, 0.13698, 0.089389]
+                dimensions = [0.9, 0.515, 0.7]
+                rotation_angles = (0, 0, 20)
+                _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
             elif "pi_corn_full_subset4" in cfg.data_dir:
                 box_center = [0.093149, 0.148414, -0.293219]
                 dimensions = [0.2, 0.2, 0.6]
