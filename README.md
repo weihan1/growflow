@@ -138,6 +138,8 @@ python metrics_interp.py --skip-dynamic3dgs --skip-4dgs --skip-4dgaussians
 ```bash
 python metrics_captured.py --skip-dynamic3dgs --skip-4dgs --skip-4dgaussians
 ```
+The results will be saved in `./growflow/final_results_{scene}`.
+
 
 
 ## Tips for training on custom data
