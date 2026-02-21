@@ -158,4 +158,10 @@ This code is built on top of [gsplat](https://github.com/nerfstudio-project/gspl
 If you find growflow helpful, please consider citing:
 
 ```
+@article{luo2026grow,
+  title={Grow with the Flow: 4D Reconstruction of Growing Plants with Gaussian Flow Fields},
+  author={Luo, Weihan and Goli, Lily and Bahmani, Sherwin and Taubner, Felix and Tagliasacchi, Andrea and Lindell, David B},
+  journal={arXiv preprint arXiv:2602.08958},
+  year={2026}
+}
 ```
