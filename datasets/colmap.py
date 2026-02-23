@@ -143,7 +143,7 @@ class DynamicParser:
             dates = dates[::subsample_factor]
             if include_end: #force the last timestep to be part
                 assert original_dates[-1] != dates[-1], "only use this when last date doesnt match"
-                original_dates.append(dates[-1])
+                dates.append(original_dates[-1])
             assert original_dates[-1] == dates[-1], f"the last date doesnt match original. please select subsample factor {get_divisors(len(original_dates) - 1)} "
         if start_from > 0: #start later, actually makes no sense
             dates = dates[start_from:]
