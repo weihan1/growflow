@@ -1123,7 +1123,7 @@ class Evaluator(BaseEngine):
 
             all_trajs = None
             all_times = None
-            tracking_window = 5 #length of tracks
+            tracking_window = cfg.tracking_window
             show_only_visible = True
             opacity_threshold_flow = 0.3 #to speed up visualizations, doesn't matter
             opacity_threshold_pc_viz = 0.1 #0.1 is a good threshold
@@ -1145,6 +1145,10 @@ class Evaluator(BaseEngine):
             for i in range(n_gaussians):
                 color = cmap(i / n_gaussians)[:3]  # Get RGB, ignore alpha
                 colors.append((int(color[0]*255), int(color[1]*255), int(color[2]*255)))
+
+            if cfg.is_reverse:
+                pred_param = torch.flip(pred_param, dims=[0])
+                eval_colors = torch.flip(eval_colors, dims=[0]) #(T, C, H,W,3)
 
             all_test_camera_ids = [f"r_{i}" for i in range(number_of_cameras)]
             for i, cam_id in tqdm(enumerate(all_test_camera_ids), total=len(all_test_camera_ids)): #iterate over all test cam id
@@ -1173,7 +1177,10 @@ class Evaluator(BaseEngine):
                     )
 
                 
-                track_cam_test_path = f"{test_eval_path}/tracks/{cam_id}"
+                if cfg.is_reverse:
+                    track_cam_test_path = f"{test_eval_path}/tracks_reversed/{cam_id}"
+                else:
+                    track_cam_test_path = f"{test_eval_path}/tracks/{cam_id}"
                 os.makedirs(track_cam_test_path, exist_ok=True)
 
                 if cfg.render_tracks:

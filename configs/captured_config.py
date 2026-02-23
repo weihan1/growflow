@@ -369,6 +369,7 @@ class Config:
     #Full eval settings, use for comparison against baselines
     track_path: str =""
     render_tracks: bool =False #TODO: enable this later...
+    tracking_window: int=35
     render_white:bool =False
     skip_train: bool = True
     skip_test: bool = False 
