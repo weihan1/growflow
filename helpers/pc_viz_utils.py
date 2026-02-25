@@ -1326,6 +1326,142 @@ def get_rainbow_colors(n_colors):
 
 #     return elev, azim
 
+def animate_point_clouds_2d(
+    point_clouds,
+    output_file="point_cloud_animation_2d.mp4",
+    fps=10,
+    point_size=20,
+    figsize=(6, 6),
+    is_reverse=True,
+    flip_x=False,
+    flip_y=False,
+    colors=None,        # (T, N, 3) or (T, N, 4) array of RGB/RGBA values
+    x_lim=None,
+    y_lim=None,
+    axes=('x', 'y'),
+):
+    """
+    Animate point clouds in 2D. Colors must be provided externally as a
+    (T, N, 3) or (T, N, 4) float array in [0, 1].
+    """
+
+    if isinstance(point_clouds, torch.Tensor):
+        point_clouds = point_clouds.cpu().numpy()
+
+    if isinstance(colors, torch.Tensor):
+        colors = colors.cpu().numpy()
+
+    T, N, _ = point_clouds.shape
+
+    if is_reverse:
+        point_clouds = np.flip(point_clouds, axis=0)
+        if colors is not None:
+            colors = np.flip(colors, axis=0)
+
+    axis_map = {'x': 0, 'y': 1, 'z': 2}
+    ax0_idx, ax1_idx = axis_map[axes[0]], axis_map[axes[1]]
+
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.set_axis_off()
+    ax.set_aspect('equal')
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+
+    first_frame = point_clouds[0]
+    h0 = first_frame[:, ax0_idx]
+    v0 = first_frame[:, ax1_idx]
+    c0 = colors[0] if colors is not None else 'blue'
+
+    scatter = ax.scatter(h0, v0, s=point_size, c=c0, alpha=0.8)
+
+    if x_lim is None:
+        pad = 0.1 * (h0.max() - h0.min() or 1)
+        ax.set_xlim(h0.min() - pad, h0.max() + pad)
+    else:
+        ax.set_xlim(x_lim)
+
+    if y_lim is None:
+        pad = 0.1 * (v0.max() - v0.min() or 1)
+        ax.set_ylim(v0.min() - pad, v0.max() + pad)
+    else:
+        ax.set_ylim(y_lim)
+
+    if flip_x:
+        ax.invert_xaxis()
+    if flip_y:
+        ax.invert_yaxis()
+
+    title = ax.set_title('Point Cloud Animation - Frame 1')
+
+    def update(frame):
+        pts = point_clouds[frame]
+        h = pts[:, ax0_idx]
+        v = pts[:, ax1_idx]
+
+        scatter.set_offsets(np.column_stack([h, v]))
+        if colors is not None:
+            scatter.set_facecolor(colors[frame])
+
+        title.set_text(f'Point Cloud Animation - Frame {frame + 1}/{T}')
+        return scatter,
+
+    anim = FuncAnimation(fig, update, frames=T, interval=1000 / fps)
+    writer = animation.FFMpegWriter(fps=fps)
+    anim.save(output_file, writer=writer)
+    print(f"Animation saved to {output_file}")
+    plt.close()
+
+
+
+def visualize_point_clouds_2d(
+    point_cloud,
+    output_file="point_cloud.png",
+    point_size=20,
+    figsize=(6, 6),
+    flip_x=False,
+    flip_y=False,
+    colors=None,        # (N, 3) or (N, 4) array of RGB/RGBA values
+    x_lim=None,
+    y_lim=None,
+):
+    """
+    Visualize a single (N, 2) point cloud and save to output_file.
+    Colors must be provided externally as an (N, 3) or (N, 4) float array in [0, 1].
+    """
+    if isinstance(point_cloud, torch.Tensor):
+        point_cloud = point_cloud.cpu().numpy()
+    if isinstance(colors, torch.Tensor):
+        colors = colors.cpu().numpy()
+
+    h = point_cloud[:, 0]
+    v = point_cloud[:, 1]
+
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.set_axis_off()
+    ax.set_aspect('equal')
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+
+    ax.scatter(h, v, s=point_size, c=colors if colors is not None else 'blue', alpha=0.8)
+
+    if x_lim is None:
+        pad = 0.1 * (h.max() - h.min() or 1)
+        ax.set_xlim(h.min() - pad, h.max() + pad)
+    else:
+        ax.set_xlim(x_lim)
+
+    if y_lim is None:
+        pad = 0.1 * (v.max() - v.min() or 1)
+        ax.set_ylim(v.min() - pad, v.max() + pad)
+    else:
+        ax.set_ylim(y_lim)
+
+    if flip_x:
+        ax.invert_xaxis()
+    if flip_y:
+        ax.invert_yaxis()
+
+    plt.savefig(output_file, bbox_inches='tight', pad_inches=0)
+    plt.close(fig)
+
 
 if __name__ == "__main__":
     point_clouds = torch.load("/scratch/ondemand28/weihanluo/2dgsplat/results/rose_2025_03_13-12_35_50/point_cloud_trajectory.pt", weights_only=True)

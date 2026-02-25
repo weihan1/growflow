@@ -19,6 +19,7 @@ from glob import glob
 import yaml
 import argparse 
 from pathlib import Path
+import re
 
 to8b = lambda x : (255*np.clip(x.cpu().numpy(),0,1)).astype(np.uint8)
 
@@ -198,6 +199,8 @@ def evaluate(cfg, data_dir, method_paths, output_path, split="test", use_mask_ps
         subsample_factor = 17
     elif scene == "pi_corn_full_subset4":
         subsample_factor = 10
+    elif scene == "pi_paperwhite_full_subset4":
+        subsample_factor = 7
     print(f"using subsample factor of {subsample_factor}")
     cont_train_times = cont_test_times[::subsample_factor]
     testing_times_int = list(range(len(cont_test_times)))
@@ -255,7 +258,7 @@ def evaluate(cfg, data_dir, method_paths, output_path, split="test", use_mask_ps
         # Process each camera folder
         #NOTE: we're gonna go with the convention that r_i corresponds to testset.camera_filter[t][i],
         #that is, the ith camera will correspond to the ith camera in testset.camera_filter for any t 
-        camera_folders = [file for file in os.listdir(test_folder) if file.startswith("r_")] #this is fine for captured
+        camera_folders = [f for f in os.listdir(test_folder) if re.match(r'^r_\d+$', f)]
         # camera_folders = ["r_0"] #makes things faster for now.
         for camera_folder in camera_folders:
             print(f"Camera folder: {camera_folder}")
@@ -424,14 +427,17 @@ if __name__ == "__main__":
     gt_data_dir = {
         "pi_rose":"./data/captured/pi_rose",
         "pi_corn_full_subset4": "./data/captured/pi_corn_full_subset4",
+        "pi_paperwhite_full_subset4": "./data/captured/pi_paperwhite_full_subset4",
     }
 
     our_test_folders = {
         "pi_corn_full_subset4": "./results/pi_corn_full_subset4/final/full_eval/test",
         "pi_rose": "./results/pi_rose/final/full_eval/test",
+        "pi_paperwhite_full_subset4": "./results/pi_paperwhite_full_subset4/final_7/full_eval/test"
     }
 
-    for scene in ["pi_corn_full_subset4", "pi_rose"]:
+    # for scene in ["pi_corn_full_subset4", "pi_rose"]:
+    for scene in ["pi_paperwhite_full_subset4"]:
         data_dir = gt_data_dir[scene]
         print(f"getting all results for scene {scene}")
         device = torch.device("cuda:0")
@@ -448,17 +454,17 @@ if __name__ == "__main__":
 
         method_paths = []
         method_paths.append(our_test_folders[scene])
-        if not cfg.skip_4dgaussians:
-            method_paths.append(
-                f"../baselines/output/4dgaussians/{scene}/test"
-            )
         if not cfg.skip_dynamic3dgs:
             method_paths.append(
-                f"../baselines/output/Dynamic3DGS/{scene}/test"
+                f"../baselines/output_arxiv/Dynamic3DGS/{scene}/test"
             )
         if not cfg.skip_4dgs:
             method_paths.append(
-                f"../baselines/output/4dgs/{scene}/test"
+                f"../baselines/output_arxiv/4dgs/{scene}/test"
+            )
+        if not cfg.skip_4dgaussians:
+            method_paths.append(
+                f"../baselines/output_arxiv/4dgaussians/{scene}/test"
             )
 
         #This is for segment stuff -- comment if not using 

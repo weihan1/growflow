@@ -17,8 +17,8 @@ from datasets.traj import (
     generate_interpolated_path,
     generate_spiral_path,
 )
-from helpers.pc_viz_utils import animate_point_clouds, animate_point_clouds_lst,visualize_point_cloud, visualize_point_cloud_captured, animate_point_clouds_captured, calculate_global_depth_range, c2w_to_matplotlib_view_colmap, c2w_to_matplotlib_view_v2
-from helpers.pc_viz_utils import select_points_in_prism
+from helpers.pc_viz_utils import animate_point_clouds, animate_point_clouds_lst,visualize_point_cloud, visualize_point_cloud_captured, animate_point_clouds_captured, calculate_global_depth_range, c2w_to_matplotlib_view_colmap, c2w_to_matplotlib_view_v2, animate_point_clouds_2d, visualize_point_clouds_2d
+from helpers.pc_viz_utils import select_points_in_prism 
 from helpers.criterions_exports import write_dict_to_csv
 import matplotlib.pyplot as plt
 from helpers.criterions import psnr as _psnr 
@@ -1330,93 +1330,19 @@ class Evaluator(BaseEngine):
                 per_viewpoint_gaussian_sets = []
                 #NOTE: below we are computing a new bounding box mask
                 mask_dataset = self.testset #which dataset to use for computing the masks
-                for pose_idx in mask_dataset.timestep_poses[t0].keys(): 
-                    mask = torch.from_numpy(mask_dataset.timestep_masks[t0][pose_idx]).to(device="cuda", dtype=torch.float32)
-                    viewmat = mask_dataset.timestep_poses[t0][pose_idx]
-                    c2ws = torch.from_numpy(viewmat).to(Ks)
-
-                    current_viewmat = torch.linalg.inv(c2ws)  #following functions assume w2c
-                    current_means_cam = world_to_cam_means(fixed_init_params[..., :3], current_viewmat[None])
-                    means_2d = pers_proj_means(current_means_cam, Ks, width=width, height=height).squeeze()
-                    
-                    # Get valid 2D coordinates (within image bounds)
-                    valid_mask = (means_2d[..., 0] >= 0) & (means_2d[..., 0] < width) & \
-                                (means_2d[..., 1] >= 0) & (means_2d[..., 1] < height)
-                    
-                    # Get integer pixel coordinates for valid points
-                    pixel_coords = means_2d[valid_mask].long()
-                    
-                    # Check which gaussians fall within the mask
-                    mask_values = mask[pixel_coords[:, 1], pixel_coords[:, 0]]  # Note: y, x indexing for mask
-                    gaussians_in_mask = torch.where(valid_mask)[0][mask_values > 0]  # Assuming mask > 0 indicates foreground
-                    
-                    # Store as a set for this viewpoint
-                    per_viewpoint_gaussian_sets.append(set(gaussians_in_mask.cpu().numpy().tolist()))
-                
-                if per_viewpoint_gaussian_sets:
-                    intersection_gaussian_indices = per_viewpoint_gaussian_sets[0]
-                    for gaussian_set in per_viewpoint_gaussian_sets[1:]:
-                        intersection_gaussian_indices = intersection_gaussian_indices.intersection(gaussian_set)
-                    
-                    final_gaussian_indices = torch.tensor(list(intersection_gaussian_indices), device="cuda", dtype=torch.long)
-                    print(f"Intersection: Found {len(final_gaussian_indices)} gaussians present in all {len(per_viewpoint_gaussian_sets)} viewpoints")
-                else:
-                    final_gaussian_indices = torch.tensor([], device="cuda", dtype=torch.long)
-                
                 
                 # #NOTE: this part overwrites the bounding box mask
                 #NOTE: the whole point of this just simply removes extra gaussians.
-                bounding_box_mask = torch.zeros(len(means_t0), dtype=torch.bool, device="cuda")
-                bounding_box_mask[final_gaussian_indices] = True
+                bounding_box_mask = torch.ones(len(means_t0), dtype=torch.bool, device="cuda")
+                # bounding_box_mask[final_gaussian_indices] = True
                 # #pass only the foreground gaussians into model
                 visible_points = pred_param[:, bounding_box_mask, 0:3]
 
                 print(f"Rendering the point cloud animation on {visible_points.shape[0]} number of points")
                 torch.save(visible_points, f"{test_eval_path}/point_cloud_trajectory.pt")
-                min_vals = np.min(visible_points.cpu().numpy(), axis=(0,1))
-                max_vals = np.max(visible_points.cpu().numpy(), axis=(0,1))
-
-                x_min, x_max = visible_points[0][:, 0].min().item(), visible_points[0][:, 0].max().item()
-                y_min, y_max = visible_points[0][:, 1].min().item(), visible_points[0][:, 1].max().item()
-                z_min, z_max = visible_points[0][:, 2].min().item(), visible_points[0][:, 2].max().item()
-
-                # Add some padding (e.g., 10%)
-                x_range = x_max - x_min
-                y_range = y_max - y_min
-                z_range = z_max - z_min
-
-                padding = 0.1
-                x_lim = [x_min - padding * x_range, x_max + padding * x_range]
-                y_lim = [y_min - padding * y_range, y_max + padding * y_range]
-                z_lim = [z_min - padding * z_range, z_max + padding * z_range]
-                print(f"x_lim= {x_lim}")
-                print(f"y_lim= {y_lim}")
-                print(f"z_lim= {z_lim}")
 
                 t0=0
                 c2ws, gt_img, inp_t, gt_masks = self.testset.__getitems__([t0]) 
-                
-                
-                # #debug r_4
-                # for elevation_offset in range(-90, 91, 15):
-                #     first_c2w, first_img = c2ws[4], gt_img[4].squeeze()
-                #     elevation, azimuth= c2w_to_matplotlib_view_colmap(first_c2w)
-                #     visualize_point_cloud_captured(
-                #         visible_points[0],
-                #         figsize=(6, 6),
-                #         output_file=f"test_{elevation_offset}.png",
-                #         center_position=None,
-                #         view_angles=(elevation+elevation_offset, azimuth),
-                #         min_vals=min_vals,
-                #         max_vals=max_vals,
-                #         flip_x=cfg.flip_x,
-                #         flip_y=cfg.flip_y,
-                #         flip_z=cfg.flip_z,
-                #         x_lim=x_lim,
-                #         y_lim=y_lim,
-                #         z_lim=z_lim,
-                #         color="red"
-                #     )
 
                 num_test_cameras = c2ws.shape[0]
                 for i in range(num_test_cameras):
@@ -1437,64 +1363,43 @@ class Evaluator(BaseEngine):
                     pixel_coords[:, 1] = torch.clamp(pixel_coords[:, 1], 0, raster_params["height"]-1)  # y coordinates
                     closest_pixels = view_image[pixel_coords[:, 1], pixel_coords[:, 0]]  # Shape: (N, 3)
 
-                    # overlay_image = view_image.clone()
+                    overlay_image = view_image.clone()
 
-                    # # Set pixel values directly (single pixel per point)
-                    # overlay_image[pixel_coords[:, 1], pixel_coords[:, 0]] = torch.tensor([1.0, 0.0, 0.0], device=view_image.device)  # Red points
+                    # Set pixel values directly (single pixel per point)
+                    overlay_image[pixel_coords[:, 1], pixel_coords[:, 0]] = torch.tensor([1.0, 0.0, 0.0], device=view_image.device)  # Red points
 
                     # plt.figure(figsize=(10, 10))
                     # plt.imshow(overlay_image.cpu().numpy())
                     # plt.title('Point Cloud Overlay')
                     # plt.axis('off')
                     # plt.savefig(f"pc_overlay_{i}.png")
-                    
 
-                    animate_point_clouds_captured(
-                        visible_points,
-                        figsize=(6, 6),
+                    T = visible_points.shape[0]
+                    intrns = raster_params["Ks"][0][None].expand(T, -1, -1).cuda()
+                    current_means_cam_all = world_to_cam_means(visible_points, first_w2c[None, None].expand(T,-1,-1,-1).cuda()).squeeze() #(T, N, 3)
+                    means_2d_all = pers_proj_means(current_means_cam_all, intrns, width=raster_params["width"], height=raster_params["height"]).squeeze()
+                    animate_point_clouds_2d(
+                        means_2d_all,
                         output_file=f"{test_eval_path}/point_cloud_gs_color_animation_r_{i}.mp4",
                         is_reverse=False,
-                        center_position=center_position,
-                        view_angles=(elevation, azimuth),
-                        min_vals=min_vals,
-                        max_vals=max_vals,
-                        flip_x=cfg.flip_x,
-                        flip_y=cfg.flip_y,
-                        flip_z=cfg.flip_z,
-                        x_lim=x_lim,
-                        y_lim=y_lim,
-                        z_lim=z_lim,
-                        color= closest_pixels.cpu()
-                        # global_depth_min=global_depth_min,
-                        # global_depth_max=global_depth_max,
-                        # depth_reference_point=depth_reference_point
+                        flip_x=False,
+                        flip_y=True,
+                        x_lim=(0, raster_params["width"]),
+                        y_lim=(0, raster_params["height"]),
+                        colors = closest_pixels.cpu().unsqueeze(0).expand(T, -1, -1)
                     )
-                    #save individual point cloud frames 
                     if cfg.save_pc_imgs:
                         os.makedirs(f"{test_eval_path}/point_clouds_gs_color/{chosen_view}", exist_ok=True)
-                        for j, point in enumerate(visible_points):
-                            visualize_point_cloud_captured(
+                        for j, point in enumerate(means_2d_all):
+                            visualize_point_clouds_2d(
                                 point,
-                                figsize=(6, 6),
                                 output_file=f"{test_eval_path}/point_clouds_gs_color/{chosen_view}/point_cloud_{j}.png",
-                                center_position=center_position,
-                                view_angles=(elevation, azimuth),
-                                min_vals=min_vals,
-                                max_vals=max_vals,
-                                flip_x=cfg.flip_x,
-                                flip_y=cfg.flip_y,
-                                flip_z=cfg.flip_z,
-                                x_lim=x_lim,
-                                y_lim=y_lim,
-                                z_lim=z_lim,
-                                color=closest_pixels.cpu()
-                                # global_depth_min=global_depth_min,
-                                # global_depth_max=global_depth_max,
-                                # depth_reference_point=depth_reference_point
+                                flip_x=False,
+                                flip_y=True,
+                                x_lim=(0, raster_params["width"]),
+                                y_lim=(0, raster_params["height"]),
+                                colors=closest_pixels.cpu(),
                             )
-
-            # else: #in this case just return the point clouds to use for the next 
-            #     return pred_param 
 
         if cfg.render_spacetime_viz:
             camtoworlds_all = self.parser.camtoworlds
