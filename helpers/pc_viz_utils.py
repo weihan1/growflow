@@ -1361,7 +1361,8 @@ def animate_point_clouds_2d(
     axis_map = {'x': 0, 'y': 1, 'z': 2}
     ax0_idx, ax1_idx = axis_map[axes[0]], axis_map[axes[1]]
 
-    fig, ax = plt.subplots(figsize=figsize)
+    dpi=100
+    fig, ax = plt.subplots(figsize=(1199/dpi, 1199/dpi), dpi=dpi)
     ax.set_axis_off()
     ax.set_aspect('equal')
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
@@ -1435,7 +1436,8 @@ def visualize_point_clouds_2d(
     h = point_cloud[:, 0]
     v = point_cloud[:, 1]
 
-    fig, ax = plt.subplots(figsize=figsize)
+    dpi= 100
+    fig, ax = plt.subplots(figsize=(1199/dpi, 1199/dpi), dpi=dpi)
     ax.set_axis_off()
     ax.set_aspect('equal')
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)

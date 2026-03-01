@@ -1125,11 +1125,11 @@ class Evaluator(BaseEngine):
             all_times = None
             tracking_window = cfg.tracking_window
             show_only_visible = True
-            opacity_threshold_flow = 0.3 #to speed up visualizations, doesn't matter
+            opacity_threshold_flow = 0.9 #to speed up visualizations, doesn't matter
             opacity_threshold_pc_viz = 0.1 #0.1 is a good threshold
             arrow_thickness = 2
             show_flow = True
-            flow_skip = 1 #skips gaussians
+            flow_skip = 10 #skips gaussians
             #loop across the number of test cameras
 
             gt_idxs = torch.where(bounding_box_mask)[0]
@@ -1142,7 +1142,7 @@ class Evaluator(BaseEngine):
             # cmap = plt.cm.get_cmap("jet") #following tracking everything
             cmap = plt.cm.get_cmap("seismic")
             colors = []
-            for i in range(n_gaussians):
+            for i in range(0, n_gaussians, flow_skip):
                 color = cmap(i / n_gaussians)[:3]  # Get RGB, ignore alpha
                 colors.append((int(color[0]*255), int(color[1]*255), int(color[2]*255)))
 
@@ -1150,6 +1150,7 @@ class Evaluator(BaseEngine):
                 pred_param = torch.flip(pred_param, dims=[0])
                 eval_colors = torch.flip(eval_colors, dims=[0]) #(T, C, H,W,3)
 
+            number_of_cameras=1 #only do from first camera
             all_test_camera_ids = [f"r_{i}" for i in range(number_of_cameras)]
             for i, cam_id in tqdm(enumerate(all_test_camera_ids), total=len(all_test_camera_ids)): #iterate over all test cam id
                 per_camera_tracks_imgs = []
@@ -1330,11 +1331,47 @@ class Evaluator(BaseEngine):
                 per_viewpoint_gaussian_sets = []
                 #NOTE: below we are computing a new bounding box mask
                 mask_dataset = self.testset #which dataset to use for computing the masks
+                for pose_idx in mask_dataset.timestep_poses[t0].keys(): 
+                    mask = torch.from_numpy(mask_dataset.timestep_masks[t0][pose_idx]).to(device="cuda", dtype=torch.float32)
+                    viewmat = mask_dataset.timestep_poses[t0][pose_idx]
+                    c2ws = torch.from_numpy(viewmat).to(Ks)
+
+                    current_viewmat = torch.linalg.inv(c2ws)  #following functions assume w2c
+                    current_means_cam = world_to_cam_means(fixed_init_params[..., :3], current_viewmat[None])
+                    means_2d = pers_proj_means(current_means_cam, Ks, width=width, height=height).squeeze()
+                    
+                    # Get valid 2D coordinates (within image bounds)
+                    valid_mask = (means_2d[..., 0] >= 0) & (means_2d[..., 0] < width) & \
+                                (means_2d[..., 1] >= 0) & (means_2d[..., 1] < height)
+                    
+                    # Get integer pixel coordinates for valid points
+                    pixel_coords = means_2d[valid_mask].long()
+                    
+                    # Check which gaussians fall within the mask
+                    mask_values = mask[pixel_coords[:, 1], pixel_coords[:, 0]]  # Note: y, x indexing for mask
+                    gaussians_in_mask = torch.where(valid_mask)[0][mask_values > 0]  # Assuming mask > 0 indicates foreground
+                    
+                    # Store as a set for this viewpoint
+                    per_viewpoint_gaussian_sets.append(set(gaussians_in_mask.cpu().numpy().tolist()))
+                
+                if per_viewpoint_gaussian_sets:
+                    intersection_gaussian_indices = per_viewpoint_gaussian_sets[0]
+                    for gaussian_set in per_viewpoint_gaussian_sets[1:]:
+                        intersection_gaussian_indices = intersection_gaussian_indices.intersection(gaussian_set)
+                    
+                    final_gaussian_indices = torch.tensor(list(intersection_gaussian_indices), device="cuda", dtype=torch.long)
+                    print(f"Intersection: Found {len(final_gaussian_indices)} gaussians present in all {len(per_viewpoint_gaussian_sets)} viewpoints")
+                else:
+                    final_gaussian_indices = torch.tensor([], device="cuda", dtype=torch.long)
+                
                 
                 # #NOTE: this part overwrites the bounding box mask
-                #NOTE: the whole point of this just simply removes extra gaussians.
-                bounding_box_mask = torch.ones(len(means_t0), dtype=torch.bool, device="cuda")
-                # bounding_box_mask[final_gaussian_indices] = True
+                #NOTE: the whole point of this just simply removes extra gaussians, for some scene it looks cleaner.
+                if "pi_rose" in cfg.data_dir or "pi_corn_full_subset4" in cfg.data_dir:
+                    bounding_box_mask = torch.zeros(len(means_t0), dtype=torch.bool, device="cuda")
+                    bounding_box_mask[final_gaussian_indices] = True
+                if "pi_paperwhite_full_subset4" in cfg.data_dir:
+                    bounding_box_mask = torch.ones(len(means_t0), dtype=torch.bool, device="cuda")
                 # #pass only the foreground gaussians into model
                 visible_points = pred_param[:, bounding_box_mask, 0:3]
 
@@ -1351,6 +1388,7 @@ class Evaluator(BaseEngine):
                     elevation, azimuth= c2w_to_matplotlib_view_colmap(first_c2w)
                     print(f"elevation = {elevation}")
                     print(f"azimuth = {azimuth}")
+                    # continue
                     center_position = None
 
                     first_w2c = torch.linalg.inv(first_c2w)
