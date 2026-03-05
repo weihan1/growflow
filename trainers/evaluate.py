@@ -740,7 +740,7 @@ class Evaluator(BaseEngine):
             opacity_threshold_pc_viz = 0.1 #0.1 is a good threshold
             arrow_thickness = 2
             show_flow = True
-            flow_skip = 1 #skips gaussians
+            flow_skip = 70
             means_t0 = pred_param[0,..., :3]
             if gt_idxs is None:
                 print("gt idxs not defined, computing closest gaussians to gt_t0")
@@ -754,9 +754,9 @@ class Evaluator(BaseEngine):
                 if cfg.bkgd_color == [0,0,0]:
                     cmap = plt.cm.get_cmap("seismic")
                 else: #seismic doesnt look good with white background
-                    cmap = plt.cm.get_cmap("tab10")
+                    cmap = plt.get_cmap('coolwarm')
                 colors = []
-                for i in range(n_gaussians):
+                for i in range(0, n_gaussians, flow_skip):
                     color = cmap(i / n_gaussians)[:3]  # Get RGB, ignore alpha
                     colors.append((int(color[0]*255), int(color[1]*255), int(color[2]*255)))
                 # colors = [(int(c[0]*255), int(c[1]*255), int(c[2]*255)) for c in colors]  # Convert to 0-255 range
@@ -1003,7 +1003,7 @@ class Evaluator(BaseEngine):
                 elevation, azimuth= c2w_to_matplotlib_view_v2(first_c2w)
                 first_w2c = torch.linalg.inv(first_c2w)
                 current_means_cam = world_to_cam_means(self.gaussians.splats.means[gt_idxs_viz_pc], first_w2c[None].cuda())
-                means_2d = pers_proj_means(current_means_cam, raster_params["Ks"][0][None], 400, 400).squeeze()
+                means_2d = pers_proj_means(current_means_cam, raster_params["Ks"][0][None], width=raster_params["width"],height=raster_params["height"]).squeeze()
                 view_image = eval_colors[i][t0] #always use t0's image, (400,400,3)
                 pixel_coords = torch.round(means_2d[:, :2]).long()  # Shape: (N, 2)
                 # Clamp coordinates to be within image bounds
@@ -1011,32 +1011,33 @@ class Evaluator(BaseEngine):
                 pixel_coords[:, 1] = torch.clamp(pixel_coords[:, 1], 0, 399)  # y coordinates
                 closest_pixels = view_image[pixel_coords[:, 1], pixel_coords[:, 0]]  # Shape: (N, 3)
 
+                #collect 2D tracks
+                T =  visible_points.shape[0]
+                current_means_cam_all = world_to_cam_means(visible_points, first_w2c[None].expand(T, -1, -1)[:,None].cuda()).squeeze()
+                means_2d_all = pers_proj_means(current_means_cam_all, raster_params["Ks"][0].expand(T, -1,-1), width=raster_params["width"], height=raster_params["height"]).squeeze()
+                torch.save(means_2d_all,f"{test_eval_path}/point_cloud_trajectory2d_r_{i}.pt")
 
-                animate_point_clouds(
-                    visible_points,
-                    figsize=(6, 6),
+                animate_point_clouds_2d(
+                    means_2d_all,
                     output_file=f"{test_eval_path}/point_cloud_gs_color_animation_r_{i}.mp4",
                     is_reverse=False,
-                    center_position=center_position,
-                    min_vals=min_vals,
-                    max_vals=max_vals,
-                    view_angles= (elevation, azimuth),
-                    use_z_coloring=False,
-                    color= closest_pixels.cpu()
+                    flip_x=False,
+                    flip_y=True,
+                    x_lim=(0, raster_params["width"]),
+                    y_lim=(0, raster_params["height"]),
+                    colors = closest_pixels.cpu().unsqueeze(0).expand(T, -1, -1)
                 )
-                #save individual point cloud frames 
-                os.makedirs(f"{test_eval_path}/point_clouds_gs_color/r_{i}", exist_ok=True)
-                for j, point in enumerate(visible_points):
-                    visualize_point_cloud(
+                chosen_view = f"r_{i}"
+                os.makedirs(f"{test_eval_path}/point_clouds_gs_color/{chosen_view}", exist_ok=True)
+                for j, point in enumerate(means_2d_all):
+                    visualize_point_clouds_2d(
                         point,
-                        figsize=(6, 6),
-                        output_file=f"{test_eval_path}/point_clouds_gs_color/r_{i}/point_cloud_{j}.png",
-                        center_position=center_position,
-                        min_vals=min_vals,
-                        max_vals=max_vals,
-                        view_angles=(elevation, azimuth),
-                        use_z_coloring=False,
-                        color= closest_pixels.cpu()
+                        output_file=f"{test_eval_path}/point_clouds_gs_color/{chosen_view}/point_cloud_{j}.png",
+                        flip_x=False,
+                        flip_y=True,
+                        x_lim=(0, raster_params["width"]),
+                        y_lim=(0, raster_params["height"]),
+                        colors=closest_pixels.cpu(),
                     )
 
 
@@ -1400,6 +1401,11 @@ class Evaluator(BaseEngine):
                     pixel_coords[:, 0] = torch.clamp(pixel_coords[:, 0], 0, raster_params["width"]-1)  # x coordinates
                     pixel_coords[:, 1] = torch.clamp(pixel_coords[:, 1], 0, raster_params["height"]-1)  # y coordinates
                     closest_pixels = view_image[pixel_coords[:, 1], pixel_coords[:, 0]]  # Shape: (N, 3)
+
+                    T =  visible_points.shape[0]
+                    current_means_cam_all = world_to_cam_means(visible_points, first_w2c[None].expand(T, -1, -1)[:,None].cuda()).squeeze()
+                    means_2d_all = pers_proj_means(current_means_cam_all, raster_params["Ks"][0].expand(T, -1,-1), width=raster_params["width"], height=raster_params["height"]).squeeze()
+                    torch.save(means_2d_all,f"{test_eval_path}/point_cloud_trajectory2d_r_{i}.pt")
 
                     overlay_image = view_image.clone()
 

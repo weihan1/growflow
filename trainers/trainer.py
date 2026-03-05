@@ -1408,6 +1408,10 @@ class Trainer(BaseEngine):
             box_center = [-0.000, 0.000, 1.626]
             dimensions = (0.3, 0.3, 0.4)
             rotation_angles = (0,0,0)
+        elif "rose" in cfg.data_dir:
+            box_center = [-0.000, 0.000, 1.626]
+            dimensions = (0.3, 0.3, 0.6)
+            rotation_angles = (0,0,0)
             
         _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
             
