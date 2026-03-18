@@ -17,6 +17,7 @@ Our approach achieves superior image quality and geometric accuracy compared to 
 [Andrea Tagliasacchi](https://theialab.ca/),
 [David Lindell](https://davidlindell.com/)
 
+[[Paper](https://arxiv.org/pdf/2602.08958)] [[Project Page](https://weihanluo.ca/growflow/)]
 
 ## Installation
 
