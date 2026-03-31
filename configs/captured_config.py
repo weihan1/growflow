@@ -249,7 +249,7 @@ class Config:
     dynamic_eval_steps: List[int] = field(default_factory=lambda: [1, 1000, 2000, 4000,  5000, 6000, 8000, 12000, 15_000, 30_000, 60_000, 80_000, 100_000])
     # # Steps to save the model
     dynamic_save_steps: List[int] = field(default_factory=lambda: [1, 1000, 3000, 5000, 7000, 9000, 10_000, 15_000, 30_000, 50_000, 40_000, 60_000, 80_000, 100_000, 120_000, 140_000, 160_000, 180_000, 200_000, 250_000, 270_000])
-    run_eval: bool = True
+    run_eval: bool = False
     # Resume dynamic training
     resume_dyn_training: bool =False
 

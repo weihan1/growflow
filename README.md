@@ -111,7 +111,7 @@ python main_blender.py default --data-dir <your_data_dir> --static-ckpt <your_ck
 
 **Captured:** 
 ```bash
-python main_captured.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_last_stage>  --unscaled-encoder-lr-init 5e-4 --subsample-factor <desired_subsample_factor>
+python main_captured.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_last_stage>  --unscaled-encoder-lr-init 5e-4 --subsample-factor <desired_subsample_factor> --full_trajectory_path <your_ckpt_from_boundary_stage>
 ```
 
 
