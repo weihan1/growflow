@@ -1071,7 +1071,9 @@ class Evaluator(BaseEngine):
                 rotation_angles = (30, 0, 0)
                 _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
         else:
-            bounding_box_mask = torch.ones(means_t0.shape[0], dtype=torch.bool)
+            bounding_box_mask = torch.ones(
+                means_t0.shape[0], dtype=torch.bool, device=means_t0.device
+            )
         raster_params = get_raster_params_captured(cfg, self.gaussians.splats, self.testset, self.gaussians.deformed_params_dict)
         width, height = raster_params["width"], raster_params["height"]
         test_eval_path = os.path.join(full_eval_path, "test")
@@ -1085,11 +1087,27 @@ class Evaluator(BaseEngine):
             else:
                 num_test_timesteps = num_timesteps
 
-            pred_param = torch.zeros(num_test_timesteps, fixed_init_params.shape[0], fixed_init_params.shape[-1], device="cuda", dtype=torch.float32)
-            # pred_param[0] = fixed_init_params
             number_of_cameras = len(self.testset.camera_filter[0])
-            out_img = torch.zeros(num_test_timesteps, number_of_cameras, raster_params["height"], raster_params["width"], 3)
-            gt_images =  torch.zeros(num_test_timesteps, number_of_cameras, raster_params["height"], raster_params["width"], 3)
+            keep_pred_params = cfg.render_tracks or cfg.animate_pc
+            pred_param = None
+            if keep_pred_params:
+                pred_param = torch.empty(
+                    num_test_timesteps,
+                    fixed_init_params.shape[0],
+                    fixed_init_params.shape[-1],
+                    device=device,
+                    dtype=torch.float32,
+                )
+
+            all_test_camera_ids = [f"r_{i}" for i in range(number_of_cameras)]
+            camera_output_paths = []
+            for cam_id in all_test_camera_ids:
+                cam_test_path = os.path.join(test_eval_path, cam_id)
+                os.makedirs(cam_test_path, exist_ok=True)
+                camera_output_paths.append(cam_test_path)
+
+            first_eval_frame = None
+            viewmats_by_timestep = [] if cfg.render_tracks else None
             Ks = raster_params["Ks"][None, 0] #just pick one
 
             #fix the number of cameras for intrinsics and backgrounds
@@ -1097,115 +1115,111 @@ class Evaluator(BaseEngine):
             raster_params["backgrounds"] = raster_params["backgrounds"].expand(number_of_cameras, -1)
 
             for t in range(num_test_timesteps):
-                c2ws, gt_img, inp_t, gt_masks = self.testset.__getitems__([t]) 
+                c2ws, _, _, _ = self.testset.__getitems__([t])
                 raster_params["viewmats"] = c2ws.to(device) #when we rasterize we need to invert this!
-                gt_img = gt_img.to(device)
+                if viewmats_by_timestep is not None:
+                    viewmats_by_timestep.append(c2ws.cpu())
                 inp_t = t / (num_test_timesteps - 1)
                 if inp_t == 0: #dont query neural ode 
                     pred_param_t1 = fixed_init_params 
                 else:
-                    t_with_zero = torch.tensor([0., inp_t],dtype=torch.float32, device="cuda") 
+                    t_with_zero = torch.tensor(
+                        [0.0, inp_t], dtype=torch.float32, device=device
+                    )
                     selected_gaussians = fixed_init_params[bounding_box_mask]
                     pred_param_t0_t1 = self.dynamical_model(selected_gaussians, t_with_zero) #(T, N_gaussians, feat_dim) 
                     T = pred_param_t0_t1.shape[0]
                     pred_param_selected = fixed_init_params.unsqueeze(0).repeat(T, 1, 1)
                     pred_param_selected[:, bounding_box_mask] = pred_param_t0_t1
                     pred_param_t1 = pred_param_selected[1]
-                renders, alphas = self.gaussians.rasterize_with_dynamic_params_batched(pred_param_t1[None], raster_params, activate_params=True, return_meta=False) 
-                renders = renders.squeeze()
-                pred_param[t] = pred_param_t1 #(N,10)
-                out_img[t] = renders 
-                gt_images[t] = gt_img.squeeze()
+                renders, _ = self.gaussians.rasterize_with_dynamic_params_batched(
+                    pred_param_t1[None],
+                    raster_params,
+                    activate_params=True,
+                    return_meta=False,
+                )
+                renders = torch.clamp(renders, 0.0, 1.0)
+                if renders.dim() == 5:
+                    # rasterize_with_dynamic_params_batched returns [C, T, H, W, 3].
+                    assert renders.shape[1] == 1
+                    renders = renders[:, 0]
+                elif renders.dim() == 3:
+                    renders = renders[None]
+                assert renders.dim() == 4 and renders.shape[0] == number_of_cameras
 
-            eval_pixels = gt_images 
-            colors = torch.clamp(out_img, 0.0, 1.0)
-            image_colors = colors
-            eval_colors = colors
+                if pred_param is not None:
+                    pred_param[t] = pred_param_t1 #(N,10)
 
-            all_trajs = None
-            all_times = None
-            tracking_window = cfg.tracking_window
-            show_only_visible = True
-            opacity_threshold_flow = 0.9 #to speed up visualizations, doesn't matter
-            opacity_threshold_pc_viz = 0.1 #0.1 is a good threshold
-            arrow_thickness = 2
-            show_flow = True
-            flow_skip = 10 #skips gaussians
-            #loop across the number of test cameras
+                output_t = num_test_timesteps - 1 - t if cfg.is_reverse else t
+                if cfg.animate_pc and output_t == 0:
+                    first_eval_frame = renders.cpu()
 
-            gt_idxs = torch.where(bounding_box_mask)[0]
-            if show_only_visible:
-                opacities_idxs = torch.sigmoid(raster_params["opacities"][gt_idxs]).cpu()
-                gt_idxs = gt_idxs[opacities_idxs > opacity_threshold_flow]
-            n_gaussians = gt_idxs.shape[0]
-            print(f"tracking {n_gaussians} gaussians for tracks")
-            # colors = sns.color_palette(n_colors=n_gaussians)
-            # cmap = plt.cm.get_cmap("jet") #following tracking everything
-            cmap = plt.cm.get_cmap("seismic")
-            colors = []
-            for i in range(0, n_gaussians, flow_skip):
-                color = cmap(i / n_gaussians)[:3]  # Get RGB, ignore alpha
-                colors.append((int(color[0]*255), int(color[1]*255), int(color[2]*255)))
-
-            if cfg.is_reverse:
-                pred_param = torch.flip(pred_param, dims=[0])
-                eval_colors = torch.flip(eval_colors, dims=[0]) #(T, C, H,W,3)
-
-            number_of_cameras=1 #only do from first camera
-            all_test_camera_ids = [f"r_{i}" for i in range(number_of_cameras)]
-            for i, cam_id in tqdm(enumerate(all_test_camera_ids), total=len(all_test_camera_ids)): #iterate over all test cam id
-                per_camera_tracks_imgs = []
-                #For each camera create a new folder
-                cam_test_path = f"{test_eval_path}/{cam_id}"
-                os.makedirs(cam_test_path, exist_ok=True)
-                pred_images = eval_colors[:,i]
-                gt_images = eval_pixels[:, i]
-                multi_images = pred_images.dim() == 4 #(check if its F,H,W,3)
-            
-                if multi_images:
-                    for j, frame in enumerate(pred_images): 
-                        j_plus_offset = j + offset 
-                        pred_image = (frame * 255).cpu().numpy().astype(np.uint8)
-                        imageio.imwrite(
-                            f"{cam_test_path}/{j_plus_offset:05d}.png", #ranges from [0,17]
-                            pred_image
-                        )
-                else:
-                    j_plus_offset = offset 
-                    pred_image = (pred_images * 255).cpu().numpy().astype(np.uint8)
+                for camera_index, frame in enumerate(renders):
+                    pred_image = (frame * 255).cpu().numpy().astype(np.uint8)
                     imageio.imwrite(
-                        f"{cam_test_path}/{j_plus_offset:05d}.png", #ranges from [0,17]
-                        pred_image
+                        os.path.join(
+                            camera_output_paths[camera_index],
+                            f"{output_t + offset:05d}.png",
+                        ),
+                        pred_image,
                     )
 
-                
-                if cfg.is_reverse:
-                    track_cam_test_path = f"{test_eval_path}/tracks_reversed/{cam_id}"
-                else:
-                    track_cam_test_path = f"{test_eval_path}/tracks/{cam_id}"
-                os.makedirs(track_cam_test_path, exist_ok=True)
+            if pred_param is not None and cfg.is_reverse:
+                pred_param = torch.flip(pred_param, dims=[0])
+            if viewmats_by_timestep is not None and cfg.is_reverse:
+                viewmats_by_timestep.reverse()
 
-                if cfg.render_tracks:
-                    # Process each frame for this camera
-                    for j in range(len(pred_images) if multi_images else 1): 
+            if cfg.render_tracks:
+                tracking_window = cfg.tracking_window
+                opacity_threshold_flow = 0.9
+                arrow_thickness = 2
+                show_flow = True
+                flow_skip = 10
+
+                gt_idxs = torch.where(bounding_box_mask)[0]
+                opacities_idxs = torch.sigmoid(
+                    raster_params["opacities"][gt_idxs]
+                ).cpu()
+                gt_idxs = gt_idxs[opacities_idxs > opacity_threshold_flow]
+                n_gaussians = gt_idxs.shape[0]
+                print(f"tracking {n_gaussians} gaussians for tracks")
+                cmap = plt.cm.get_cmap("seismic")
+                track_colors = []
+                for index in range(0, n_gaussians, flow_skip):
+                    color = cmap(index / n_gaussians)[:3]
+                    track_colors.append(
+                        (int(color[0] * 255), int(color[1] * 255), int(color[2] * 255))
+                    )
+
+                for i, cam_id in tqdm(
+                    enumerate(all_test_camera_ids), total=len(all_test_camera_ids)
+                ):
+                    per_camera_tracks_imgs = []
+                    all_trajs = None
+                    all_times = None
+                    if cfg.is_reverse:
+                        track_cam_test_path = f"{test_eval_path}/tracks_reversed/{cam_id}"
+                    else:
+                        track_cam_test_path = f"{test_eval_path}/tracks/{cam_id}"
+                    os.makedirs(track_cam_test_path, exist_ok=True)
+
+                    for j in range(num_test_timesteps):
                         print(f"processing the {j}th image")
                         frame_idx = j
                         view_time = frame_idx  # or use your actual time indexing
-                        
-                        # Get current frame data
-                        if multi_images:
-                            current_rendering = (pred_images[j] * 255).cpu().numpy().astype(np.uint8) #(h,w,3)
-                        else:
-                            current_rendering = (pred_images * 255).cpu().numpy().astype(np.uint8)
-                        
+                        current_rendering = imageio.imread(
+                            os.path.join(
+                                camera_output_paths[i], f"{j + offset:05d}.png"
+                            )
+                        )
                         current_means3d = pred_param[j,...,:3]  #(N, 3)
                         
                         # Get current viewmat for this camera
-                        current_viewmat = raster_params["viewmats"][i]  # viewmat for camera i
+                        current_viewmat = viewmats_by_timestep[j][i].to(device)
                         current_viewmat = torch.linalg.inv(current_viewmat)  #following functions assume w2c
                         # Project current 3D positions to 2D
                         current_means_cam = world_to_cam_means(current_means3d[gt_idxs], current_viewmat[None])
-                        means_2d = pers_proj_means(current_means_cam, raster_params["Ks"][0][None], width=width, height=height) #TODO: fix this hardcoding
+                        means_2d = pers_proj_means(current_means_cam, raster_params["Ks"][i][None], width=width, height=height)
                         current_projections = means_2d.squeeze()
                         
                         # Update 3D trajectories
@@ -1228,10 +1242,10 @@ class Evaluator(BaseEngine):
                             # Draw current points
                             for idx in range(0, n_gaussians, flow_skip):
                                 if current_mask[idx]:
-                                    color_idx = (idx // flow_skip) % len(colors)
+                                    color_idx = (idx // flow_skip) % len(track_colors)
                                     cv2.circle(current_rendering, 
                                             (int(current_projections_np[idx, 0]), int(current_projections_np[idx, 1])), 
-                                            2, colors[color_idx], -1)
+                                            2, track_colors[color_idx], -1)
                             
                             # Draw trajectories if we have multiple frames
                             if all_trajs.shape[0] > 1:
@@ -1249,13 +1263,13 @@ class Evaluator(BaseEngine):
                                 for t_idx in range(all_trajs.shape[0] - 1): #loop over each time
                                     prev_gaussians = torch.from_numpy(all_trajs[t_idx]).to("cuda")
                                     prev_projections_cam = world_to_cam_means(prev_gaussians, current_viewmat[None])
-                                    prev_projections = pers_proj_means(prev_projections_cam, raster_params["Ks"][0][None], width=width, height=height)
+                                    prev_projections = pers_proj_means(prev_projections_cam, raster_params["Ks"][i][None], width=width, height=height)
                                     prev_projections = prev_projections.squeeze()
                                     prev_time = all_times[t_idx]
                                     
                                     curr_gaussians = torch.from_numpy(all_trajs[t_idx + 1]).to("cuda")
                                     curr_projections_cam = world_to_cam_means(curr_gaussians, current_viewmat[None])
-                                    curr_projections = pers_proj_means(curr_projections_cam, raster_params["Ks"][0][None], width=width, height=height)
+                                    curr_projections = pers_proj_means(curr_projections_cam, raster_params["Ks"][i][None], width=width, height=height)
                                     curr_projections = curr_projections.squeeze()
                                     curr_time = all_times[t_idx + 1]
                                     
@@ -1277,46 +1291,42 @@ class Evaluator(BaseEngine):
                                     # Draw trajectory lines
                                     if curr_time <= view_time and prev_time <= view_time:
                                         for idx in range(0, curr_projections.shape[0], flow_skip):
-                                            color_idx = (idx // flow_skip) % len(colors)
+                                            color_idx = (idx // flow_skip) % len(track_colors)
                                             if prev_mask[idx] and curr_mask[idx]: #whether or not we plot current gaussian
                                                 traj_img = cv2.line(traj_img,
                                                                 (int(prev_projections[idx, 0]), int(prev_projections[idx, 1])), #start 
                                                                 (int(curr_projections[idx, 0]), int(curr_projections[idx, 1])), #end
-                                                                tuple(int(c * fade_factor) for c in colors[color_idx]), arrow_thickness) #overlay line on black image
+                                                                tuple(int(c * fade_factor) for c in track_colors[color_idx]), arrow_thickness) #overlay line on black image
                                  
                                 # Overlay trajectories on rendering
                                 current_rendering[traj_img > 0] = traj_img[traj_img > 0]
                         
                         # Save the frame with tracks
-                        if multi_images:
-                            j_plus_offset = j + offset
-                            imageio.imwrite(
-                                f"{track_cam_test_path}/{j_plus_offset:05d}.png",
-                                current_rendering
-                            )
-                        else:
-                            j_plus_offset = offset
-                            imageio.imwrite(
-                                f"{track_cam_test_path}/{j_plus_offset:05d}.png",
-                                current_rendering
-                            )
-                
-                
+                        j_plus_offset = j + offset
+                        imageio.imwrite(
+                            f"{track_cam_test_path}/{j_plus_offset:05d}.png",
+                            current_rendering
+                        )
                         per_camera_tracks_imgs.append(current_rendering)
                     imageio.mimwrite(f"{track_cam_test_path}/full_track.mp4",
                                      per_camera_tracks_imgs, 
                                      fps = len(per_camera_tracks_imgs)/cfg.video_duration)
-                # visualize_psnr_over_time(psnr_upper_bound, psnr_ours, f"{test_eval_path}", cam_indx=cam_id)
-            
-            image_height, image_width = image_colors.shape[-2], image_colors.shape[-3]
-            all_test_frames = (image_colors).contiguous().view(-1, image_height, image_width, 3)
-            ind_colors = (all_test_frames * 255).cpu().numpy().astype(np.uint8)
-            #Save one long video that go through all frames
-            imageio.mimwrite(
-                    f"{test_eval_path}/all_test_step{step}_video.mp4",
-                    ind_colors,
-                    fps = out_img.shape[1]/cfg.video_duration 
-                )
+
+            # Stream the combined video from the PNGs instead of materializing every
+            # frame in memory again.
+            with imageio.get_writer(
+                f"{test_eval_path}/all_test_step{step}_video.mp4",
+                fps=number_of_cameras / cfg.video_duration,
+            ) as video_writer:
+                for j in range(num_test_timesteps):
+                    for camera_output_path in camera_output_paths:
+                        video_writer.append_data(
+                            imageio.imread(
+                                os.path.join(
+                                    camera_output_path, f"{j + offset:05d}.png"
+                                )
+                            )
+                        )
             
             if cfg.animate_pc:
                 #NOTE: for animate pc, we use intersection so that all methods look the same
@@ -1395,7 +1405,7 @@ class Evaluator(BaseEngine):
                     first_w2c = torch.linalg.inv(first_c2w)
                     current_means_cam = world_to_cam_means(self.gaussians.splats.means[bounding_box_mask], first_w2c[None].cuda())
                     means_2d = pers_proj_means(current_means_cam, raster_params["Ks"][0][None].cuda(), width=raster_params["width"], height=raster_params["height"]).squeeze()
-                    view_image = eval_colors[t0][i].cuda() 
+                    view_image = first_eval_frame[i].to(device)
                     pixel_coords = torch.round(means_2d[:, :2]).long()  # Shape: (N, 2)
                     # Clamp coordinates to be within image bounds
                     pixel_coords[:, 0] = torch.clamp(pixel_coords[:, 0], 0, raster_params["width"]-1)  # x coordinates
