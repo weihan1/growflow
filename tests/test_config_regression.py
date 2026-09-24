@@ -1,6 +1,6 @@
 """Regression tests for the public training configuration contract.
 
-These tests intentionally avoid importing ``runner.py`` or initializing CUDA. They
+These tests intentionally avoid importing ``trainers.runner`` or initializing CUDA. They
 protect the dataclass defaults and Tyro CLI used by the documented entry points so
 the configuration modules can be reorganized without silently changing behavior.
 """

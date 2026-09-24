@@ -4,7 +4,7 @@ import unittest
 
 import torch
 
-from metrics_captured import image_to_metric_input
+from commands.metrics_captured import image_to_metric_input
 
 
 class MetricInputLayoutTests(unittest.TestCase):

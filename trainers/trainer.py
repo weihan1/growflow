@@ -429,7 +429,7 @@ class Trainer(BaseEngine):
 
         if cfg.mixed_init_training:
             if full_trajectory is None:
-                exit("need to input full_trajectory, please run generate_trajectory.py first")
+                exit("need to input full_trajectory, please run python -m commands.trajectory first")
 
             else:
                 print("Starting training from loaded trajectory") 

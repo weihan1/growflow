@@ -46,7 +46,7 @@ pip install -r requirements_no_iso.txt --no-build-isolation
 
 
 ## Dataset and checkpoints
-To download the dataset, run `python download_data.py`
+To download the dataset, run `python -m scripts.download_data` from the repository root.
 
 The dataset structure is 
 ```
@@ -66,7 +66,7 @@ The dataset structure is
 
 NOTE: the synthetic datasets are already subsampled with interpolation factor 6, whereas the captured datasets are not subsampled, so you need to manually set the `subsample_factor` argument (see the boundary reconstruction and global optimization stage).
 
-To download the checkpoints, run `python download_checkpoints.py`
+To download the checkpoints, run `python -m scripts.download_checkpoints` from the repository root.
 The checkpoint structure is 
 ```
 ├── ckpts
@@ -84,23 +84,23 @@ Our model is trained in 3 stages (see sect. 3.3 of paper), the static reconstruc
 ### Static reconstruction stage 
 **Synthetic:** 
 ```bash
-python main_blender.py default --data-dir <your_data_dir>
+python -m commands.train synthetic default --data-dir <your_data_dir>
 ```
 
 **Captured:** 
 ```bash
-python main_captured.py default --data-dir <your_data_dir>
+python -m commands.train captured default --data-dir <your_data_dir>
 ```
 
 ### Boundary reconstruction stage
 **Synthetic:** 
 ```bash
-python generate_trajectory.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_static_stage> --no-adjoint
+python -m commands.trajectory synthetic default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_static_stage> --no-adjoint
 ```
 
 **Captured:** 
 ```bash
-python generate_trajectory_captured.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_static_stage> --no-adjoint --subsample-factor <desired_subsample_factor>
+python -m commands.trajectory captured default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_static_stage> --no-adjoint --subsample-factor <desired_subsample_factor>
 ```
 
 NOTE: In the paper, for the rose scene, `desired_subsample_factor=17` and for the corn scene, `desired_subsample_factor=10`. You can also choose your own subsample_factor, however, if it's not a divisor of the total number of timesteps, you need to add the `--include-end` flag. For the paperwhite scene, use the flag `--encoding freq` throughout.
@@ -108,37 +108,39 @@ NOTE: In the paper, for the rose scene, `desired_subsample_factor=17` and for th
 ### Global optimization stage
 **Synthetic:** 
 ```bash
-python main_blender.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_static_stage> --full_trajectory_path <your_ckpt_from_boundary_stage> --rtol 1e-5 --atol 1e-6
+python -m commands.train synthetic default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_static_stage> --full-trajectory-path <your_ckpt_from_boundary_stage> --rtol 1e-5 --atol 1e-6
 ```
 
 **Captured:** 
 ```bash
-python main_captured.py default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_last_stage>  --unscaled-encoder-lr-init 5e-4 --subsample-factor <desired_subsample_factor> --full_trajectory_path <your_ckpt_from_boundary_stage>
+python -m commands.train captured default --data-dir <your_data_dir> --static-ckpt <your_ckpt_from_last_stage> --unscaled-encoder-lr-init 5e-4 --subsample-factor <desired_subsample_factor> --full-trajectory-path <your_ckpt_from_boundary_stage>
 ```
 
 
 ### Evaluation
 **Synthetic:** 
 ```bash
-python full_render.py --data-dir <your_data_dir> --dynamic-ckpt <your_final_checkpoint_from_global>
+python -m commands.render synthetic --data-dir <your_data_dir> --dynamic-ckpt <your_final_checkpoint_from_global>
 ```
 
 **Captured:** 
 ```bash
-python full_render_captured.py --data-dir <your_data_dir> --dynamic-ckpt <your_final_checkpoint_from_global>
+python -m commands.render captured --data-dir <your_data_dir> --dynamic-ckpt <your_final_checkpoint_from_global>
 ```
+
+Use `--ground-truth` with either render command to export ground-truth views instead. Training and trajectory commands also accept `mcmc` in place of `default`.
 
 ### Metrics 
 NOTE: You can only run the metrics code after running the eval code.
 
 **Synthetic:** 
 ```bash
-python metrics_interp.py --skip-dynamic3dgs --skip-4dgs --skip-4dgaussians
+python -m commands.metrics_synthetic --skip-dynamic3dgs --skip-4dgs --skip-4dgaussians
 ```
 
 **Captured:** 
 ```bash
-python metrics_captured.py --skip-dynamic3dgs --skip-4dgs --skip-4dgaussians
+python -m commands.metrics_captured --skip-dynamic3dgs --skip-4dgs --skip-4dgaussians
 ```
 The results will be saved in `./growflow/final_results_{scene}`.
 
@@ -150,7 +152,7 @@ The results will be saved in `./growflow/final_results_{scene}`.
 - **Swap to MLP**. For all experiments, we parametrize the neural ODE using an Hexplane as it performs slightly better in the synthetic scenes (see ablation studies in paper). However, on some real scenes, we find that using an MLP with fourier-encoding performs better. You can swap the representation in the boundary reconstruction stage and global optimization stage by using the flag `--encoding freq`.
 
 ## Reproducing numbers
-Dowload the dataset and checkpoints and then run `python render_all.py` to get the renderings and then run the metrics code.
+Download the dataset and checkpoints, then run `python -m scripts.render_all` to get the renderings and then run the metrics code. Run all commands from the repository root.
 
 ## Credits 
 This code is built on top of [gsplat](https://github.com/nerfstudio-project/gsplat) and [torchdiffeq](https://github.com/rtqichen/torchdiffeq). Thanks to the maintainers for their contribution to the community!
