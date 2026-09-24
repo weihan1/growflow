@@ -19,7 +19,7 @@ class Runner:
     """Engine for training and testing."""
 
     def __init__(
-        self, cfg
+        self, cfg, load_test_cameras_only=False
     ) -> None:
         safe_state(42) #get seed
 
@@ -91,21 +91,10 @@ class Runner:
             self.shared_dataset = Dynamic_Datasetshared(
                 parser=self.parser,
                 apply_mask=cfg.apply_mask,
-                debug_data_loading=cfg.debug_data_loading
+                debug_data_loading=cfg.debug_data_loading,
+                load_test_cameras_only=load_test_cameras_only,
             )
             shared_data = self.shared_dataset.get_shared_data()
-            self.trainset = Dynamic_Dataset(
-                parser=self.parser,
-                split="train",
-                shared_data=shared_data,
-                is_reverse=cfg.is_reverse,
-                downsample_factor=cfg.downsample_factor,
-                include_zero=cfg.include_zero,
-                cam_batch_size = cfg.cam_batch_size,
-                time_normalize_factor=cfg.time_normalize_factor,
-                return_mask = cfg.return_mask,
-            )
-            
             self.testset = Dynamic_Dataset(
                 parser=self.parser,
                 split="test",
@@ -118,6 +107,23 @@ class Runner:
                 time_normalize_factor=cfg.time_normalize_factor,
                 return_mask = cfg.return_mask,
             )
+            if load_test_cameras_only:
+                # Full captured inference only needs test cameras. Some optional
+                # evaluator paths read timestep metadata through trainset, which
+                # the test dataset also provides.
+                self.trainset = self.testset
+            else:
+                self.trainset = Dynamic_Dataset(
+                    parser=self.parser,
+                    split="train",
+                    shared_data=shared_data,
+                    is_reverse=cfg.is_reverse,
+                    downsample_factor=cfg.downsample_factor,
+                    include_zero=cfg.include_zero,
+                    cam_batch_size = cfg.cam_batch_size,
+                    time_normalize_factor=cfg.time_normalize_factor,
+                    return_mask = cfg.return_mask,
+                )
             self.scene_scale = self.parser.scene_scale * 1.1 * cfg.global_scale
             print("Scene scale:", self.scene_scale)
 

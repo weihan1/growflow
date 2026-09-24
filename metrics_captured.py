@@ -176,7 +176,8 @@ def evaluate(cfg, data_dir, method_paths, output_path, split="test", use_mask_ps
     shared_dataset = Dynamic_Datasetshared(
         parser=parser,
         apply_mask=cfg.apply_mask,
-        debug_data_loading=cfg.debug_data_loading
+        debug_data_loading=cfg.debug_data_loading,
+        load_test_cameras_only=True,
     )
     shared_data = shared_dataset.get_shared_data()
     testset = Dynamic_Dataset(

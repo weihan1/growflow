@@ -556,10 +556,12 @@ class Dynamic_Datasetshared():
         parser,  # Should be DynamicParser
         debug_data_loading=False,
         apply_mask =False,
+        load_test_cameras_only=False,
     ):
         self.parser = parser
         self.apply_mask = apply_mask
         self.debug_data_loading = debug_data_loading
+        self.load_test_cameras_only = load_test_cameras_only
         self._load_all_data()
         
     
@@ -588,6 +590,9 @@ class Dynamic_Datasetshared():
                 timestep_data['image_ids'], #NOTE: this might NOT be ordered
                 timestep_data["masks_paths"]
             )):
+                if self.load_test_cameras_only and i % self.parser.test_every != 0:
+                    continue
+
                 # Load mask and invert it
                 mask = imageio.imread(mask_path)
                 if len(mask.shape) == 3:
@@ -609,7 +614,7 @@ class Dynamic_Datasetshared():
                     )
                     image = cv2.remap(image, mapx, mapy, cv2.INTER_LINEAR)
                     inverted_mask = cv2.remap(inverted_mask, mapx, mapy, cv2.INTER_NEAREST)
-                    
+
                     x, y, w, h = timestep_data['roi_undist_dict'][camera_id]
                     image = image[y : y + h, x : x + w]
                     inverted_mask = inverted_mask[y : y + h, x : x + w]
@@ -657,7 +662,7 @@ class Dynamic_Datasetshared():
                 for future in tqdm(as_completed(futures), total=self.parser.num_timesteps, desc="loading all images"):
                     result = future.result()
                     t = result['t']
-                    
+
                     # Now safely update the instance variables (no threading issues here)
                     self.timestep_images[t] = result['images']
                     self.timestep_masks[t] = result['masks']
@@ -689,7 +694,8 @@ class Dynamic_Datasetshared():
             'poses': self.timestep_poses,
             'intrinsics': self.timestep_intrinsics,
             'masks': self.timestep_masks,
-            'image_paths': self.timestep_image_paths
+            'image_paths': self.timestep_image_paths,
+            'test_cameras_only': self.load_test_cameras_only,
         }
     
 
@@ -730,6 +736,7 @@ class Dynamic_Dataset(Dataset):
             self.timestep_intrinsics = shared_data['intrinsics']
             self.timestep_masks = shared_data['masks']
             self.timestep_image_paths = shared_data['image_paths']
+            self.test_cameras_only = shared_data.get('test_cameras_only', False)
             self.is_shared = True
         else:
             exit("shared_data cannot be null")
@@ -751,13 +758,20 @@ class Dynamic_Dataset(Dataset):
         for timestep in self.available_timesteps:
             if len(self.timestep_images[timestep]) > 0:
                 all_cameras = list(self.timestep_images[timestep].keys())
-                test_cameras = all_cameras[::self.parser.test_every]  # indices 0, N, 2N, ...
-                train_cameras = [cam for cam in all_cameras if cam not in test_cameras]
-                
-                if self.split == "train":
-                    self.camera_filter[timestep] = train_cameras
-                elif self.split == "test":
-                    self.camera_filter[timestep] = test_cameras
+                if self.test_cameras_only:
+                    if self.split != "test":
+                        raise ValueError(
+                            "Test-camera-only shared data cannot create a training split"
+                        )
+                    self.camera_filter[timestep] = all_cameras
+                else:
+                    test_cameras = all_cameras[::self.parser.test_every]  # indices 0, N, 2N, ...
+                    train_cameras = [cam for cam in all_cameras if cam not in test_cameras]
+
+                    if self.split == "train":
+                        self.camera_filter[timestep] = train_cameras
+                    elif self.split == "test":
+                        self.camera_filter[timestep] = test_cameras
         
         # Print statistics
         print(f"{self.split.capitalize()} split: Using {len(self.camera_filter[0])} cameras (filtered view)")

@@ -99,7 +99,7 @@ def main(cfg):
     display_config(cfg)
     assert cfg.dynamic_ckpt is not None, "please specify dynamic ckpt"
     print(f"Running full eval on {cfg.dynamic_ckpt}")
-    runner = Runner(cfg)
+    runner = Runner(cfg, load_test_cameras_only=True)
     runner.full_eval()
 
 if __name__ == "__main__":
@@ -107,7 +107,6 @@ if __name__ == "__main__":
     cfg.adjust_steps(cfg.steps_scaler)
     #This will just enable default pruning strategy
     main(cfg)
-
 
 
 
