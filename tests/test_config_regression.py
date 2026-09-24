@@ -155,6 +155,13 @@ def _entrypoint_cli(config_type: Type[Any], args: list[str]) -> Any:
 
 
 class ConfigSchemaRegressionTests(unittest.TestCase):
+    def test_only_one_initial_condition_is_supported(self) -> None:
+        for config_type in (BlenderConfig, CapturedConfig):
+            with self.subTest(config=config_type.__module__):
+                self.assertEqual(config_type().num_init_conditions, 1)
+                with self.assertRaisesRegex(ValueError, "Only one initial condition"):
+                    config_type(num_init_conditions=2)
+
     def test_complete_schema_and_defaults_are_unchanged(self) -> None:
         config_types = {
             "blender": BlenderConfig,

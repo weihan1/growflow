@@ -671,26 +671,20 @@ class Trainer(BaseEngine):
                     #NOTE: no need to cache anything 
 
                 else:
-                    if cfg.num_init_conditions == 1:
-                        curr_t = inp_t[1:] #selects all timesteps that we need to predict
-                        # current_index = torch.where(cont_times == curr_t[0].item())[0].item() #index of the smallest timestep
-                        current_indices = int_t_returned[1:]
-                        first_predicted_index = current_indices[0].item()
-                        previous_index = first_predicted_index - 1
-                        previous_t = cont_times[previous_index] #lower bound of integration
-                        previous_params = torch.from_numpy(full_trajectory[previous_index]).to("cuda") #initial_params
-                        inp_t[0] = previous_t 
-                        selected_gaussians = previous_params[bounding_box_mask] #select a subset of gaussians
-                        # print(f"inp_t is {inp_t}")
-                        pred_param_selected = self.dynamical_model(selected_gaussians, inp_t) #(T, N_gaussians, feat_dim)
-                        T = pred_param_selected.shape[0]
-                        pred_param = fixed_initial_params.unsqueeze(0).repeat(T, 1, 1) 
-                        pred_param[:, bounding_box_mask] = pred_param_selected
-                        # end_time = time.time()
-                        # print(f"time to deform  is {end_time - start_time}")
-                    else:
-                        print("only one initial condition is supported")
-                        exit(1)
+                    curr_t = inp_t[1:] #selects all timesteps that we need to predict
+                    # current_index = torch.where(cont_times == curr_t[0].item())[0].item() #index of the smallest timestep
+                    current_indices = int_t_returned[1:]
+                    first_predicted_index = current_indices[0].item()
+                    previous_index = first_predicted_index - 1
+                    previous_t = cont_times[previous_index] #lower bound of integration
+                    previous_params = torch.from_numpy(full_trajectory[previous_index]).to("cuda") #initial_params
+                    inp_t[0] = previous_t
+                    selected_gaussians = previous_params[bounding_box_mask] #select a subset of gaussians
+                    # print(f"inp_t is {inp_t}")
+                    pred_param_selected = self.dynamical_model(selected_gaussians, inp_t) #(T, N_gaussians, feat_dim)
+                    T = pred_param_selected.shape[0]
+                    pred_param = fixed_initial_params.unsqueeze(0).repeat(T, 1, 1)
+                    pred_param[:, bounding_box_mask] = pred_param_selected
             else:
                 selected_gaussians = fixed_initial_params[bounding_box_mask]
                 # print(f"inp_t is {inp_t}")
@@ -1454,24 +1448,19 @@ class Trainer(BaseEngine):
                     #NOTE: no need to cache anything 
 
                 else:
-                    if cfg.num_init_conditions == 1:
-                        curr_t = inp_t[1:] #selects all timesteps that we need to predict
-                        # current_index = torch.where(cont_times == curr_t[0].item())[0].item() #index of the smallest timestep
-                        current_indices = int_t_returned[1:]
-                        first_predicted_index = current_indices[0].item()
-                        previous_index = first_predicted_index - 1
-                        previous_t = cont_times[previous_index] #lower bound of integration
-                        previous_params = torch.from_numpy(full_trajectory[previous_index]).to("cuda") #initial_params
-                        inp_t[0] = previous_t 
-                        # print(f"integrating from {inp_t[0]} -> {inp_t[1:]}")
-                        # start_time = time.time()
-                        selected_gaussians = previous_params[bounding_box_mask] #select a subset of gaussians
-                        pred_param_selected = self.dynamical_model(selected_gaussians, inp_t) #(T, N_gaussians, feat_dim)
-                        T = pred_param_selected.shape[0]
-                        pred_param = fixed_initial_params.unsqueeze(0).repeat(T, 1, 1) 
-                        pred_param[:, bounding_box_mask] = pred_param_selected
-                        # end_time = time.time()
-                        # print(f"time to deform  is {end_time - start_time}")
+                    curr_t = inp_t[1:] #selects all timesteps that we need to predict
+                    # current_index = torch.where(cont_times == curr_t[0].item())[0].item() #index of the smallest timestep
+                    current_indices = int_t_returned[1:]
+                    first_predicted_index = current_indices[0].item()
+                    previous_index = first_predicted_index - 1
+                    previous_t = cont_times[previous_index] #lower bound of integration
+                    previous_params = torch.from_numpy(full_trajectory[previous_index]).to("cuda") #initial_params
+                    inp_t[0] = previous_t
+                    selected_gaussians = previous_params[bounding_box_mask] #select a subset of gaussians
+                    pred_param_selected = self.dynamical_model(selected_gaussians, inp_t) #(T, N_gaussians, feat_dim)
+                    T = pred_param_selected.shape[0]
+                    pred_param = fixed_initial_params.unsqueeze(0).repeat(T, 1, 1)
+                    pred_param[:, bounding_box_mask] = pred_param_selected
             else:
                 selected_gaussians = fixed_initial_params[bounding_box_mask]
                 pred_param_selected = self.dynamical_model(selected_gaussians, inp_t) #(T, N_gaussians, feat_dim)

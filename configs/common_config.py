@@ -99,7 +99,8 @@ class CommonConfig:
     load_optimizers: bool = True
     use_skip: bool = False
     mixed_init_training: bool = True
-    num_init_conditions: int = 1
+    # Keep this field for compatibility with saved configs; multi-init training is unsupported.
+    num_init_conditions: Literal[1] = 1
     full_trajectory_path: str = ""
     image_supervision: bool = True
     geometry_supervision: bool = False
@@ -313,6 +314,10 @@ class CommonConfig:
     skip_rendering: bool = False
     task_name: str = "dense_supervision"
     existing_result_path: str = ""
+
+    def __post_init__(self) -> None:
+        if self.num_init_conditions != 1:
+            raise ValueError("Only one initial condition is supported")
 
     def adjust_steps(self, factor: float) -> None:
         """Scale static-training and densification schedules."""
