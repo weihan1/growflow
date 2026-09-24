@@ -23,6 +23,12 @@ import re
 
 to8b = lambda x : (255*np.clip(x.cpu().numpy(),0,1)).astype(np.uint8)
 
+
+def image_to_metric_input(image):
+    """Convert an HWC image to the NCHW layout expected by image metrics."""
+    return image.permute(2, 0, 1).unsqueeze(0)
+
+
 def img2vid(path, img_files, is_reverse=False, video_duration=3):
     """
     Save a bunch of image files to a video.
@@ -328,8 +334,8 @@ def evaluate(cfg, data_dir, method_paths, output_path, split="test", use_mask_ps
                 # eval_pixels = eval_pixels * gt_mask[...,None]
                 rendered_img = rendered_img
                 eval_pixels = eval_pixels 
-                rendered_img_permuted = rendered_img.permute(2,1,0)[None,...]
-                eval_pixels_permuted = eval_pixels.permute(2,1,0)[None,...]
+                rendered_img_permuted = image_to_metric_input(rendered_img)
+                eval_pixels_permuted = image_to_metric_input(eval_pixels)
                 results[method_name]["ssim"][camera_folder][timestep] = round(ssim(rendered_img_permuted, eval_pixels_permuted).item(), 3)
                 results[method_name]["lpips"][camera_folder][timestep] = round(lpips(rendered_img_permuted, eval_pixels_permuted).item(), 3)
                 if timestep in training_times_int:
