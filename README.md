@@ -1,8 +1,8 @@
 # Grow with the Flow: 4D Reconstruction of Growing Plants with Gaussian Flow Fields
 
-<video src="./assets/demo.mp4" controls preload="metadata" width="100%"></video>
+[![GrowFlow video demo](./assets/demo.gif)](./assets/demo.mp4)
 
-[Watch the video demo](./assets/demo.mp4)
+*Click the demo to watch the full-resolution video.*
 
 **TL;DR: 4D reconstruction of plant growth from multi-view timelapse measurements using neural ODE.**
 **Full Abstract**:
