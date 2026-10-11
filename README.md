@@ -122,6 +122,43 @@ python -m commands.render captured --data-dir <your_data_dir> --dynamic-ckpt <yo
 
 Use `--ground-truth` with either render command to export ground-truth views instead. Training and trajectory commands also accept `mcmc` in place of `default`.
 
+### Optional color flow (SH degree 0)
+
+By default, the Neural ODE evolves Gaussian position, rotation, and scale while
+keeping color and opacity fixed. To also learn time-varying color, add
+`--learn-shs --sh-degree 0` to **boundary reconstruction, global optimization, and
+rendering**. Both synthetic and captured commands accept these flags.
+
+Start from a static checkpoint trained with `--sh-degree 0`; an existing SH0
+checkpoint can be reused without static retraining. For example, the boundary command is:
+
+```bash
+python -m commands.trajectory synthetic default --data-dir <your_data_dir> --static-ckpt <your_SH0_static_ckpt> --no-adjoint --learn-shs --sh-degree 0
+```
+
+Keep the same resolution and background options as static training. This mode
+appends three DC spherical-harmonic coefficients to each Gaussian's ODE state
+(10 geometry values + 3 color values). Gaussian IDs stay persistent, opacity
+stays fixed, and the color derivative starts at zero. It does not introduce
+Gaussian birth/death or time-dependent visibility masks.
+
+Boundary caches and dynamic checkpoints are mode-specific: regenerate the
+boundary trajectory when switching color flow on or off, and use matching flags
+for global training and inference. Higher SH degrees and appearance optimization
+are not supported in color-flow mode. Omitting `--learn-shs` keeps the original
+geometry-only model and checkpoint format.
+
+### Inspect camera poses
+
+The Viser viewer shows each camera's mature image in a side panel when its wireframe frustum is clicked. It also displays the mature synthetic mesh (or the latest COLMAP point cloud for captured scenes):
+
+```bash
+python -m scripts.view_camera_poses synthetic --data-dir data/synthetic/clematis_transparent_final_small_vase_70_timesteps_subsample_6
+python -m scripts.view_camera_poses captured --data-dir data/captured/pi_paperwhite_full_subset4 --timestep 0
+```
+
+Open the URL printed by the script. Use the **Plant** dropdown to switch scenes without restarting; the viewer discovers sibling scenes automatically, or you can pass `--data-dir data/synthetic` (or `data/captured`) to start from the dataset root. Click a frustum to jump to its viewpoint and compare its image in the side panel. Blue frustums are training cameras and orange frustums are test cameras. Synthetic datasets support `--split train|test|both`; captured `--timestep 0` selects the latest date, and `--test-every` defaults to 8. Captured datasets do not ship a mesh; use `--mesh <aligned_mesh.ply>` if you have one in COLMAP coordinates. Use `--host` and `--port` when viewing through a remote node or port forward.
+
 ### Metrics 
 NOTE: You can only run the metrics code after running the eval code.
 
