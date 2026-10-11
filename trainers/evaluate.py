@@ -422,7 +422,8 @@ class Evaluator(BaseEngine):
         #     if 'weight' in name:
         #         print(f"{name}: max={param.abs().max().item():.4e}")
 
-        if cfg.train_interp:
+        scene = os.path.basename(os.path.normpath(cfg.data_dir)).split("_transparent_final")[0]
+        if cfg.train_interp and cfg.use_bounding_box:
             means_t0 = self.gaussians.splats.means
             if "clematis" in cfg.data_dir:
                 box_center = [0.015, 0.000, 1.678]
@@ -464,7 +465,9 @@ class Evaluator(BaseEngine):
                 dimensions = (0.243, 0.243, 0.311)
                 rotation_angles = (0,0,0)
                 scene = "plant_5"
-                
+            else:
+                raise ValueError(f"No synthetic evaluation bounding box for {scene}; use --no-use-bounding-box")
+
             _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
             selected_gaussians = fixed_init_params[bounding_box_mask]
             pred_param_selected = self.dynamical_model(selected_gaussians, inp_t) #(T, N_gaussians, feat_dim)
@@ -616,8 +619,13 @@ class Evaluator(BaseEngine):
             else:
                 test_eval_path = os.path.join(full_eval_path, "test_masked")
             means_t0 = fixed_init_params[:, :3]
-            assert cfg.learn_masks ^ cfg.use_bounding_box, "can only learn masks or use bounding box"
-            if "clematis" in cfg.data_dir:
+            scene = os.path.basename(os.path.normpath(cfg.data_dir)).split("_transparent_final")[0]
+            assert not (cfg.learn_masks and cfg.use_bounding_box), "can only learn masks or use bounding box"
+            if not cfg.use_bounding_box and not cfg.learn_masks:
+                bounding_box_mask = torch.ones(
+                    means_t0.shape[0], dtype=torch.bool, device=means_t0.device
+                )
+            elif "clematis" in cfg.data_dir:
                 box_center = [0.015, 0.000, 1.678]
                 dimensions = (0.350, 0.3, 0.5)
                 rotation_angles = (0, 0, 0)
@@ -662,8 +670,11 @@ class Evaluator(BaseEngine):
                 dimensions = (0.3, 0.3, 0.6)
                 rotation_angles = (0,0,0)
                 scene = "rose"
-                
-            _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
+            else:
+                raise ValueError(f"No synthetic rendering bounding box for {scene}; use --no-use-bounding-box")
+
+            if cfg.use_bounding_box or cfg.learn_masks:
+                _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
             # raster_params["opacities"] = raster_params["opacities"][bounding_box_mask]
             # raster_params["colors"] = raster_params["colors"][bounding_box_mask]
             print(f"using only {bounding_box_mask.sum()} gaussians")

@@ -1366,7 +1366,11 @@ class Trainer(BaseEngine):
 
         scene = cfg.data_dir.split("/")[-1]
         means_t0 = self.gaussians.splats.means
-        if "clematis" in cfg.data_dir:
+        if not cfg.use_bounding_box:
+            bounding_box_mask = torch.ones(
+                means_t0.shape[0], dtype=torch.bool, device=means_t0.device
+            )
+        elif "clematis" in cfg.data_dir:
             box_center = [0.015, 0.000, 1.678]
             dimensions = (0.350, 0.3, 0.5)
             rotation_angles = (0, 0, 0)
@@ -1406,8 +1410,11 @@ class Trainer(BaseEngine):
             box_center = [-0.000, 0.000, 1.626]
             dimensions = (0.3, 0.3, 0.6)
             rotation_angles = (0,0,0)
-            
-        _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
+        else:
+            raise ValueError(f"No synthetic bounding box for {scene}; use --no-use-bounding-box for all Gaussians")
+
+        if cfg.use_bounding_box:
+            _, bounding_box_mask = select_points_in_prism(means_t0.detach(), box_center, dimensions, rotation_angles=rotation_angles)
             
         num_gauss_ode = bounding_box_mask.sum()
 
