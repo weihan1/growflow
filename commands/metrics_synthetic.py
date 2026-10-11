@@ -17,6 +17,7 @@ from helpers.mesh_utils import compute_chamfer_between_point_and_mesh
 from helpers.pc_viz_utils import visualize_point_cloud, animate_point_clouds_lst
 from helpers.plotting_utils import plot_metrics
 from helpers.image_utils import visualize_tensor_error_map
+from helpers.trajectory_io import select_trajectory_points
 import subprocess
 from glob import glob
 import yaml
@@ -480,11 +481,14 @@ def evaluate(cfg, data_dir, method_paths, output_path, split="test"):
                     )
                 )
                 if "plant" in scene:
-                    unscaled_gt_mesh_vert = track_i #keep everything otherwise looks weird
+                    unscaled_gt_mesh_vert, _ = select_trajectory_points(track_i)
                 else:
                     n_points = track_i.shape[0]
-                    clamped_indices = np.clip(closest_indices, 0, n_points - 1)
-                    unscaled_gt_mesh_vert = track_i[clamped_indices]
+                    # New archives use fixed global IDs; never turn an invalid
+                    # ID into an unrelated point by clamping it.
+                    has_track_metadata = os.path.isfile(os.path.join(os.path.dirname(gt_tracks_path), "trajectory_metadata.json"))
+                    selected_indices = closest_indices if has_track_metadata else np.clip(closest_indices, 0, n_points - 1)
+                    unscaled_gt_mesh_vert, _ = select_trajectory_points(track_i, selected_indices)
                 results[method_name]["chamfer"][t] = round(chamfer_distance, 3)
                 if t in training_times_int:
                     results_training[method_name]["chamfer"][t] = round(chamfer_distance, 3)

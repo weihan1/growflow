@@ -22,6 +22,7 @@ from helpers.pc_viz_utils import select_points_in_prism
 from helpers.criterions_exports import write_dict_to_csv
 import matplotlib.pyplot as plt
 from helpers.criterions import psnr as _psnr 
+from helpers.trajectory_io import select_trajectory_points
 import cv2
 
 
@@ -522,8 +523,8 @@ class Evaluator(BaseEngine):
 
         #Compute chamfer distance
         gt_tracks_path = os.path.join(cfg.data_dir, "meshes", f"relevant_{scene}_meshes", "trajectory_frames.npz")
-        gt_tracks = np.load(gt_tracks_path)
-        gt_t0_all = gt_tracks["frame_0000"] #(N,3)
+        with np.load(gt_tracks_path, allow_pickle=False) as gt_tracks:
+            gt_t0_all, _ = select_trajectory_points(gt_tracks["frame_0000"])
         # subsample_factor_pc = 1
 
         opacity_threshold = 0.1
@@ -735,8 +736,8 @@ class Evaluator(BaseEngine):
             # assert cfg.track_path != "", "please specify a valid track_path"
             gt_tracks_path = os.path.join(cfg.data_dir, "meshes", f"relevant_{scene}_meshes", "trajectory_frames.npz")
             gt_idxs = None
-            gt_tracks = np.load(gt_tracks_path)
-            gt_t0_all = gt_tracks["frame_0000"] #(N,3)
+            with np.load(gt_tracks_path, allow_pickle=False) as gt_tracks:
+                gt_t0_all, _ = select_trajectory_points(gt_tracks["frame_0000"])
             if "plant" not in scene:
                 subsample_factor_tracks = 15 #prevent overcrowding (10k points is good)
             else:
@@ -975,8 +976,8 @@ class Evaluator(BaseEngine):
 
             gt_tracks_path = os.path.join(cfg.data_dir, "meshes", f"relevant_{scene}_meshes", "trajectory_frames.npz")
             gt_idxs = None
-            gt_tracks = np.load(gt_tracks_path)
-            gt_t0_all = gt_tracks["frame_0000"] #(N,3)
+            with np.load(gt_tracks_path, allow_pickle=False) as gt_tracks:
+                gt_t0_all, _ = select_trajectory_points(gt_tracks["frame_0000"])
             if "plant" not in scene:
                 subsample_factor_tracks = 15 #prevent overcrowding (10k points is good)
             else:

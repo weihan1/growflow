@@ -15,6 +15,7 @@ from copy import deepcopy
 import os
 from helpers.pc_viz_utils import visualize_point_cloud
 from helpers.gsplat_utils import map_cont_to_int
+from helpers.trajectory_io import trajectory_validity
 
 @dataclass
 class Static_Dataset:
@@ -142,8 +143,9 @@ class Dynamic_Dataset(Dataset):
         #TODO: need to use multithreading here to load faster, for now it's fine
         scene = self.data_dir.stem.split("_transparent_final")[0] 
         gt_tracks_path = self.data_dir / "meshes" / f"relevant_{scene}_meshes" / "trajectory_frames.npz"
-        gt_tracks = np.load(gt_tracks_path)
-        gt_tracks_arr = [gt_tracks[key] for key in sorted(gt_tracks.files)]
+        with np.load(gt_tracks_path, allow_pickle=False) as gt_tracks:
+            gt_tracks_arr = [gt_tracks[key] for key in sorted(gt_tracks.files)]
+        self.gt_tracks_valid = [trajectory_validity(points) for points in gt_tracks_arr]
         # visualize_point_cloud(gt_tracks_arr[-1])
 
         # First pass: count frames per camera and collect all times

@@ -282,10 +282,15 @@ for scene in ["plant_5"]:
 
         gt_tracks_path = os.path.join(full_path, "meshes", f"relevant_{scene}_meshes", "trajectory_frames.npz")
         gt_idxs = None
-        gt_tracks = np.load(gt_tracks_path)
-        gt_t0_all = gt_tracks["frame_0000"] #(N,3)
+        with np.load(gt_tracks_path, allow_pickle=False) as gt_tracks:
+            gt_t0_all = gt_tracks["frame_0000"] #(N,3)
+        valid_track_ids = np.flatnonzero(np.isfinite(gt_t0_all).all(axis=1))
+        if len(valid_track_ids) == 0:
+            raise ValueError("No valid ground-truth points at the matching timestep")
         means_t0 = torch.load(means_t0_path)[0] #pick timestep 0's pc
-        gt_idxs = find_closest_gauss(means_t0.cpu().numpy(), gt_t0_all, return_unique=True)
+        gt_idxs = find_closest_gauss(means_t0.cpu().numpy(), gt_t0_all[valid_track_ids], return_unique=True)
+        # Save original IDs, not indices into the filtered finite-point array.
+        gt_idxs = torch.as_tensor(valid_track_ids, dtype=torch.long)[gt_idxs]
         torch.save(gt_idxs, os.path.join(full_path,"closest_indices.pt"))
 
             
