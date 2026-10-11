@@ -19,6 +19,7 @@ from datasets.sampler import NeuralODEDataSampler, InfiniteNeuralODEDataSampler,
 from helpers.gsplat_utils import world_to_cam_means, pers_proj_means
 import matplotlib.pyplot as plt
 from helpers.criterions import psnr as _psnr 
+from helpers.gaussian_state import pack_gaussian_state, validate_boundary_trajectory
 import seaborn as sns 
 
 
@@ -399,20 +400,9 @@ class Trainer(BaseEngine):
             elif hasattr(self.dynamical_model, "deformation_net"):
                 self.dynamical_model.deformation_net.grid.set_aabb(xyz_max=xyz_max, xyz_min=xyz_min)
 
-        fixed_initial_params_lst = []
-        #make sure we append in the same order that we specify in the deformed_params_lst 
-        #mean quat scales shs opacities 
-        for param in self.gaussians.deformed_params_list:
-            if param == "means":
-                fixed_initial_params_lst.append(self.gaussians.splats["means"])
-            elif param == "quats":
-                fixed_initial_params_lst.append(self.gaussians.splats["quats"])
-            elif param == "scales":
-                fixed_initial_params_lst.append(self.gaussians.splats["scales"])
-
-        # only need to check self.gaussians.deformed_params_list, self.gaussians.deformed_params_dict 
-        fixed_initial_params = torch.concat(fixed_initial_params_lst, dim=-1) #(N, F) 
-        del fixed_initial_params_lst
+        fixed_initial_params = pack_gaussian_state(
+            self.gaussians.splats, self.gaussians.deformed_params_list
+        )
 
         #raster_params contains uniform raster parameters like near/far planes, intrinsics, etc.
         train_time_index, cont_times, raster_params = prepare_times(
@@ -424,6 +414,8 @@ class Trainer(BaseEngine):
             self.gaussians.deformed_params_list,
             out_dir=cfg.result_dir,
         )
+        if full_trajectory is not None:
+            validate_boundary_trajectory(full_trajectory, fixed_initial_params, len(cont_times))
         if timestep_counter is None:
             timestep_counter = Counter()
 
@@ -854,18 +846,9 @@ class Trainer(BaseEngine):
                 self.dynamical_model.deformation_net.grid.set_aabb(xyz_max=xyz_max, xyz_min=xyz_min)
 
 
-        fixed_initial_params_lst = []
-        for param in self.gaussians.deformed_params_list:
-            if param == "means":
-                fixed_initial_params_lst.append(self.gaussians.splats["means"])
-            elif param == "quats":
-                fixed_initial_params_lst.append(self.gaussians.splats["quats"])
-            elif param == "scales":
-                fixed_initial_params_lst.append(self.gaussians.splats["scales"])
-
-        # only need to check self.gaussians.deformed_params_list, self.gaussians.deformed_params_dict 
-        fixed_initial_params = torch.concat(fixed_initial_params_lst, dim=-1) #(N, F) 
-        del fixed_initial_params_lst
+        fixed_initial_params = pack_gaussian_state(
+            self.gaussians.splats, self.gaussians.deformed_params_list
+        )
 
         train_time_index, cont_times, raster_params = prepare_times(
             self.gaussians.splats,
@@ -1271,20 +1254,9 @@ class Trainer(BaseEngine):
             elif hasattr(self.dynamical_model, "deformation_net"):
                 self.dynamical_model.deformation_net.grid.set_aabb(xyz_max=xyz_max, xyz_min=xyz_min)
                  
-        fixed_initial_params_lst = []
-        #make sure we append in the same order that we specify in the deformed_params_lst 
-        #mean quat scales shs opacities 
-        for param in self.gaussians.deformed_params_list:
-            if param == "means":
-                fixed_initial_params_lst.append(self.gaussians.splats["means"])
-            elif param == "quats":
-                fixed_initial_params_lst.append(self.gaussians.splats["quats"])
-            elif param == "scales":
-                fixed_initial_params_lst.append(self.gaussians.splats["scales"])
-
-        # only need to check self.gaussians.deformed_params_list, self.gaussians.deformed_params_dict 
-        fixed_initial_params = torch.concat(fixed_initial_params_lst, dim=-1) #(N, F) 
-        del fixed_initial_params_lst
+        fixed_initial_params = pack_gaussian_state(
+            self.gaussians.splats, self.gaussians.deformed_params_list
+        )
 
         #raster_params contains uniform raster parameters like near/far planes, intrinsics, etc.
         train_time_index, cont_times, raster_params = prepare_times(
@@ -1301,6 +1273,8 @@ class Trainer(BaseEngine):
 
 
         #Cache the full trajectory, essentially a list of initial conditions to be used when doing mixed_init_training
+        if full_trajectory is not None:
+            validate_boundary_trajectory(full_trajectory, fixed_initial_params, len(cont_times))
         if cfg.mixed_init_training:
             if full_trajectory is None:
                 exit("full trajectory must be provided")

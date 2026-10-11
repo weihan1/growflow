@@ -31,7 +31,8 @@ class Simple_ODE(nn.Module):
         feature_out = None,
         use_timenet = False,
         use_skip = False,
-        feature_out_output_dim = 64
+        feature_out_output_dim = 64,
+        color_dim=0,
     ):
         super(Simple_ODE, self).__init__()
         self.device="cuda"
@@ -55,6 +56,9 @@ class Simple_ODE(nn.Module):
         self.use_skip = use_skip
         self.skips = [hidden_depth // 2]
         self.feature_out_output_dim = feature_out_output_dim #only used in hexplanes
+        self.color_dim = color_dim
+        if color_dim not in (0, 3) or (color_dim and feature_dim != 10 + color_dim):
+            raise ValueError("Color flow requires a 13-dimensional state (10 geometry + 3 SH0)")
 
 
         self.use_absolute_encoding=None #only used when training with multiple init conditions
@@ -135,6 +139,19 @@ class Simple_ODE(nn.Module):
 
 
 
+        # Create this only when enabled: legacy model keys and RNG use stay unchanged.
+        if self.color_dim:
+            if self.encoding_name == "hexplane":
+                self.mlp_colors = nn.Sequential(
+                    nn.Linear(self.feature_out_output_dim + self.augment_dim, self.feature_out_output_dim),
+                    nn.ReLU(),
+                    nn.Linear(self.feature_out_output_dim, self.color_dim),
+                )
+                init_as_identity(self.mlp_colors[-1])
+            else:
+                self.mlp_colors = nn.Linear(self.hidden_dim, self.color_dim)
+                init_as_identity(self.mlp_colors)
+
     def forward(self, t, x):
         """
         x: All gaussian parameters (N, features)
@@ -185,11 +202,13 @@ class Simple_ODE(nn.Module):
         dmeans = self.mlp_means(hidden)
         dquats = self.mlp_quats(hidden)
         dscales = self.mlp_scales(hidden)
+        derivatives = [dmeans, dquats, dscales]
+        if self.color_dim:
+            derivatives.append(self.mlp_colors(hidden))
         if self.augment_dim > 0:
             daug = self.mlp_aug(hidden)
-            out = torch.cat((dmeans, dquats, dscales, daug), dim=-1)
-        else:
-            out = torch.cat((dmeans, dquats, dscales), dim=-1)
+            derivatives.append(daug)
+        out = torch.cat(derivatives, dim=-1)
         return out
 
 

@@ -86,6 +86,7 @@ class CommonConfig:
     learn_pos: bool = True
     learn_quat: bool = True
     learn_scales: bool = True
+    # Evolve DC color coefficients alongside geometry; currently requires SH degree 0.
     learn_shs: bool = False
     learn_opacities: bool = False
     use_tanh_act: bool = False
@@ -318,6 +319,13 @@ class CommonConfig:
     def __post_init__(self) -> None:
         if self.num_init_conditions != 1:
             raise ValueError("Only one initial condition is supported")
+        if self.learn_shs:
+            if self.sh_degree != 0:
+                raise ValueError("--learn-shs currently requires --sh-degree 0")
+            if self.version != "ours" or self.app_opt:
+                raise ValueError("--learn-shs requires the Neural ODE and no appearance optimization")
+            if not (self.learn_pos and self.learn_quat and self.learn_scales) or self.learn_opacities:
+                raise ValueError("--learn-shs requires means, rotations, and scales with fixed opacity")
 
     def adjust_steps(self, factor: float) -> None:
         """Scale static-training and densification schedules."""

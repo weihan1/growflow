@@ -13,6 +13,7 @@ from helpers.utils import safe_state, setup_directories, verify_optimizer_parame
 from trainers.trainer import Trainer
 from trainers.evaluate import Evaluator
 from models.gaussian_model import Gaussians
+from helpers.gaussian_state import validate_gaussian_state
 
 
 class Runner:
@@ -244,7 +245,8 @@ class Runner:
                 multires = cfg.ours_multires,
                 spatial_temp_resolution = cfg.spatial_temp_resolution,
                 method = cfg.method,
-                feature_out_output_dim = cfg.feature_out_output_dim
+                feature_out_output_dim = cfg.feature_out_output_dim,
+                color_dim=self.gaussians.deformed_params_dict.get("shs", 0),
             ).to(self.device)
 
         print(self.dynamical_model)
@@ -373,6 +375,7 @@ class Runner:
                 for file in cfg.dynamic_ckpt
             ]
 
+            validate_gaussian_state(ckpts[0]["init_params"], self.gaussians.deformed_params_dict.get("shs", 0))
             self.dynamical_model.load_state_dict(ckpts[0]["neural_ode"])
             init_params = ckpts[0]["init_params"]
             for k in self.gaussians.splats.keys():
@@ -449,6 +452,7 @@ class Runner:
             torch.load(file, map_location=self.device, weights_only=False)
             for file in cfg.dynamic_ckpt
         ]
+        validate_gaussian_state(ckpts[0]["init_params"], self.gaussians.deformed_params_dict.get("shs", 0))
         self.dynamical_model.load_state_dict(ckpts[0]["neural_ode"])
         init_params = ckpts[0]["init_params"]
         for k in self.gaussians.splats.keys():

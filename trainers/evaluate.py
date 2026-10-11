@@ -703,7 +703,8 @@ class Evaluator(BaseEngine):
                     )
                     pred_param[:] = fixed_init_params[bounding_box_mask].unsqueeze(0) 
                     raster_params["opacities"] = raster_params["opacities"][bounding_box_mask]
-                    raster_params["colors"]= raster_params["colors"][bounding_box_mask]
+                    if "colors" in raster_params:  # Color-flow coefficients travel in pred_param.
+                        raster_params["colors"] = raster_params["colors"][bounding_box_mask]
                 else:
                     pred_param[:] = fixed_init_params.unsqueeze(0) #fix the background gaussians
                 for t, integer_t in zip(inp_t[1:], int_t[1:]):

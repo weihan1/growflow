@@ -4,6 +4,7 @@ from torch import Tensor
 import math
 import matplotlib.pyplot as plt
 from helpers.gsplat_utils import create_splats_with_optimizers
+from helpers.gaussian_state import unpack_gaussian_state
 from gsplat import rasterization 
 # from gsplat import _rasterization as rasterization #use this pytorch version to understand code
 from gsplat.strategy import DefaultStrategy, MCMCStrategy
@@ -101,7 +102,6 @@ class Gaussians(nn.Module):
         need_activate_params = ["opacities", "scales", "viewmats", "shs"] #shs only appears if we are learning it
 
         new_params = {k:v for k,v in raster_params.items() if k not in need_activate_params} #those that do not need activation
-        N = self.splats.means.shape[0] 
         # Then add activated parameters
         new_params.update({
             "opacities": torch.sigmoid(raster_params["opacities"]),
@@ -110,8 +110,9 @@ class Gaussians(nn.Module):
         })
 
         if "colors" not in new_params: #this occurs if we are learning color traj, since raster_params would have shs as key
+            shs = raster_params["shs"]
             new_params.update({
-                "colors": raster_params["shs"].reshape(N, -1, 3)
+                "colors": shs.reshape(*shs.shape[:-1], -1, 3)
             })
         
         return new_params
@@ -366,22 +367,21 @@ class Gaussians(nn.Module):
         temp_batch_size = pred_param_novel.shape[0] if pred_param_novel.dim() >= 2 else 1
 
 
-        final_image = torch.zeros(n_cams, temp_batch_size, h, w, 3, device="cuda") if temp_batch_size > 1 else torch.zeros(n_cams, h, w, 3, device="cuda")
-        final_alphas = torch.zeros(n_cams, temp_batch_size, h, w, 1, device="cuda") if temp_batch_size > 1 else torch.zeros(n_cams, h, w, 1, device="cuda")
+        final_image = pred_param_novel.new_zeros((n_cams, temp_batch_size, h, w, 3)) if temp_batch_size > 1 else pred_param_novel.new_zeros((n_cams, h, w, 3))
+        final_alphas = pred_param_novel.new_zeros((n_cams, temp_batch_size, h, w, 1)) if temp_batch_size > 1 else pred_param_novel.new_zeros((n_cams, h, w, 1))
 
         #TODO: fix issue where we neeed to conduct ablations
         temp_raster_params = deepcopy(raster_params)
         lst_of_metas = []
         for i in range(temp_batch_size): 
-            #We know a priori that means,quat,scales are what we deform
-            temp_raster_params["means"] = pred_param_novel[i,..., 0:3]
-            temp_raster_params["quats"] = pred_param_novel[i,..., 3:7]
-            temp_raster_params["scales"] = pred_param_novel[i,..., 7:10]
+            temp_raster_params.update(unpack_gaussian_state(
+                pred_param_novel[i], self.deformed_params_dict.get("shs", 0)
+            ))
 
             if activate_params:
                 new_raster_params = self.activate_params(temp_raster_params) #this activates all, which includes the deformed parameters as well
             else:
-                new_raster_params = raster_params
+                new_raster_params = temp_raster_params
             renders, alphas, meta = rasterization(**new_raster_params) #renders[0] is (C, H, W, 3)
             lst_of_metas.append(meta)
             if temp_batch_size > 1:
@@ -422,13 +422,12 @@ class Gaussians(nn.Module):
         temp_batch_size = pred_param_novel.shape[0] if pred_param_novel.dim() >= 2 else 1
 
         temp_raster_params = deepcopy(raster_params)
-        #We know a priori that means,quat,scales are what we deform
-        temp_raster_params["means"] = pred_param_novel[..., 0:3] #(T,N,3)
-        temp_raster_params["quats"] = pred_param_novel[..., 3:7] #(T,N,4)
-        temp_raster_params["scales"] = pred_param_novel[..., 7:10] #(T,N,3)
+        color_dim = self.deformed_params_dict.get("shs", 0)
+        temp_raster_params.update(unpack_gaussian_state(pred_param_novel, color_dim))
 
         temp_raster_params["opacities"]= raster_params["opacities"][None].expand(temp_batch_size,-1) #(T,N)
-        temp_raster_params["colors"] = raster_params["colors"][None].expand(temp_batch_size, -1,-1,-1) #(T,N,K,3)
+        if not color_dim:
+            temp_raster_params["colors"] = raster_params["colors"][None].expand(temp_batch_size, -1,-1,-1) #(T,N,K,3)
         temp_raster_params["viewmats"] = raster_params["viewmats"][None].expand(temp_batch_size,-1,-1,-1) #(T,C,4,4)
         temp_raster_params["Ks"] = raster_params["Ks"][None].expand(temp_batch_size,-1,-1,-1).to(temp_raster_params["viewmats"]) #(T,C,3,3)
         temp_raster_params["backgrounds"] = raster_params["backgrounds"][None].expand(temp_batch_size,-1,-1) #(T,C,3)
@@ -475,13 +474,12 @@ class Gaussians(nn.Module):
         temp_batch_size = pred_param_novel.shape[0] if pred_param_novel.dim() >= 2 else 1
 
         temp_raster_params = deepcopy(raster_params)
-        #We know a priori that means,quat,scales are what we deform
-        temp_raster_params["means"] = pred_param_novel[..., 0:3] #(T,N,3)
-        temp_raster_params["quats"] = pred_param_novel[..., 3:7] #(T,N,4)
-        temp_raster_params["scales"] = pred_param_novel[..., 7:10] #(T,N,3)
+        color_dim = self.deformed_params_dict.get("shs", 0)
+        temp_raster_params.update(unpack_gaussian_state(pred_param_novel, color_dim))
 
         temp_raster_params["opacities"]= raster_params["opacities"][None].expand(temp_batch_size,-1) #(T,N)
-        temp_raster_params["colors"] = raster_params["colors"][None].expand(temp_batch_size, -1,-1,-1) #(T,N,K,3)
+        if not color_dim:
+            temp_raster_params["colors"] = raster_params["colors"][None].expand(temp_batch_size, -1,-1,-1) #(T,N,K,3)
         temp_raster_params["viewmats"] = raster_params["viewmats"][None].expand(temp_batch_size,-1,-1,-1) #(T,C,4,4)
         temp_raster_params["Ks"] = raster_params["Ks"][None].expand(temp_batch_size,-1,-1,-1).to(temp_raster_params["viewmats"]) #(T,C,3,3)
 
@@ -611,4 +609,3 @@ class Gaussians(nn.Module):
         )
 
         return renders, alphas, info
-        

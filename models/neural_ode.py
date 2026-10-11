@@ -140,7 +140,8 @@ class DynamicalModel(nn.Module):
         multires = [1,2],
         spatial_temp_resolution = [64,64,64,25], #spatial temporal resolution
         method = "dopri5",
-        feature_out_output_dim = 64
+        feature_out_output_dim = 64,
+        color_dim=0,
     ):
 
         super(DynamicalModel, self).__init__()
@@ -228,7 +229,8 @@ class DynamicalModel(nn.Module):
             feature_out = self.feature_out,
             use_timenet = self.use_timenet,
             use_skip = self.use_skip,
-            feature_out_output_dim = self.feature_out_output_dim
+            feature_out_output_dim = self.feature_out_output_dim,
+            color_dim=color_dim,
         )
 
         self.odeblock = ODEBlock(odefunc, atol=atol, rtol=rtol, adjoint=adjoint, method=self.method, event_fn=event_fn)
@@ -295,4 +297,3 @@ class DynamicalModel(nn.Module):
         pred = self.odeblock(x,eval_times=t) #(T,N,feature_dim+augment_dim)
 
         return pred
-
