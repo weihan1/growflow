@@ -111,11 +111,11 @@ def subsample_dataset(
 
 # Usage
 if __name__ == "__main__":
-    for scene in ["lily"]:
-        for factor in [2]:
+    for scene in ["peonym"]:
+        for factor in [6]:
             subsample_dataset(
-                original_data_dir=f"../data/dynamic/blender/360/multi-view/31_views/{scene}_transparent_final_small_vase_70_timesteps",
-                output_data_dir=f"../data/dynamic/blender/360/multi-view/31_views/{scene}_transparent_final_small_vase_70_timesteps_subsample_{factor}",
+                original_data_dir=f"../data/synthetic/{scene}_transparent_final_small_vase_70_timesteps",
+                output_data_dir=f"../data/synthetic/{scene}_transparent_final_small_vase_70_timesteps_subsample_{factor}",
                 every_n=factor,
                 always_include_last=True
             )

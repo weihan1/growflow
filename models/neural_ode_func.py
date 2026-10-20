@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import sys
 from models.hexplane import HexPlaneField
 from models.encoding import get_embedder, exp_se3
+from helpers.gaussian_state import validate_color_dim
 import time
 
 
@@ -57,8 +58,12 @@ class Simple_ODE(nn.Module):
         self.skips = [hidden_depth // 2]
         self.feature_out_output_dim = feature_out_output_dim #only used in hexplanes
         self.color_dim = color_dim
-        if color_dim not in (0, 3) or (color_dim and feature_dim != 10 + color_dim):
-            raise ValueError("Color flow requires a 13-dimensional state (10 geometry + 3 SH0)")
+        validate_color_dim(color_dim)
+        if color_dim and feature_dim != 10 + color_dim:
+            raise ValueError(
+                f"Color flow requires a {10 + color_dim}-dimensional state "
+                f"(10 geometry + {color_dim} SH coefficients)"
+            )
 
 
         self.use_absolute_encoding=None #only used when training with multiple init conditions

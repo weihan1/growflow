@@ -86,7 +86,7 @@ class CommonConfig:
     learn_pos: bool = True
     learn_quat: bool = True
     learn_scales: bool = True
-    # Evolve DC color coefficients alongside geometry; currently requires SH degree 0.
+    # Evolve all RGB SH coefficients alongside geometry at the selected SH degree.
     learn_shs: bool = False
     learn_opacities: bool = False
     use_tanh_act: bool = False
@@ -320,8 +320,8 @@ class CommonConfig:
         if self.num_init_conditions != 1:
             raise ValueError("Only one initial condition is supported")
         if self.learn_shs:
-            if self.sh_degree != 0:
-                raise ValueError("--learn-shs currently requires --sh-degree 0")
+            if not 0 <= self.sh_degree <= 4:
+                raise ValueError("--learn-shs requires --sh-degree between 0 and 4")
             if self.version != "ours" or self.app_opt:
                 raise ValueError("--learn-shs requires the Neural ODE and no appearance optimization")
             if not (self.learn_pos and self.learn_quat and self.learn_scales) or self.learn_opacities:

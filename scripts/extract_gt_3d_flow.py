@@ -75,6 +75,7 @@ if __name__ == "__main__":
                "../data/dynamic/blender/360/multi-view/31_views/clematis_transparent_final_small_vase_70_timesteps/meshes/relevant_clematis_meshes"]
 
     folders = ["/scratch/ondemand28/weihanluo/neural_ode_splatting/data/dynamic/blender/360/multi-view/31_views/lily_transparent_final_small_vase_70_timesteps_subsample_2/meshes/relevant_lily_meshes"]
+    folders = ["/scratch/ondemand28/weihanluo/growflow/data/synthetic/clematis_transparent_final_small_vase_70_timesteps/meshes/relevant_clematis_meshes"]
             #    "../data/dynamic/blender/360/multi-view/31_views/tulip_transparent_final_small_vase_70_timesteps/meshes/relevant_tulip_meshes"]
     # folders = ["/scratch/ondemand28/weihanluo/neural_ode_splatting/data/dynamic/blender/360/multi-view/31_views/rose_transparent_final_70_timesteps/meshes/relevant_rose_meshes"]
     # folders = ["/scratch/ondemand28/weihanluo/neural_ode_splatting/data/dynamic/blender/360/multi-view/31_views/peony_transparent_final_small_vase/meshes/relevant_peony_meshes"]

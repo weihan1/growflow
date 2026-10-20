@@ -122,31 +122,35 @@ python -m commands.render captured --data-dir <your_data_dir> --dynamic-ckpt <yo
 
 Use `--ground-truth` with either render command to export ground-truth views instead. Training and trajectory commands also accept `mcmc` in place of `default`.
 
-### Optional color flow (SH degree 0)
+### Optional color flow
 
 By default, the Neural ODE evolves Gaussian position, rotation, and scale while
 keeping color and opacity fixed. To also learn time-varying color, add
-`--learn-shs --sh-degree 0` to **boundary reconstruction, global optimization, and
-rendering**. Both synthetic and captured commands accept these flags.
+`--learn-shs --sh-degree <degree>` to **boundary reconstruction, global optimization,
+and rendering**. SH degrees 0 through 4 are supported. Both synthetic and captured
+commands accept these flags.
 
-Start from a static checkpoint trained with `--sh-degree 0`; an existing SH0
-checkpoint can be reused without static retraining. For example, the boundary command is:
+Start from a static checkpoint trained with the **same SH degree**; an existing
+matching checkpoint can be reused without static retraining. For example, with SH3:
 
 ```bash
-python -m commands.trajectory synthetic default --data-dir <your_data_dir> --static-ckpt <your_SH0_static_ckpt> --no-adjoint --learn-shs --sh-degree 0
+python -m commands.trajectory synthetic default --data-dir <your_data_dir> --static-ckpt <your_SH3_static_ckpt> --no-adjoint --learn-shs --sh-degree 3
 ```
 
 Keep the same resolution and background options as static training. This mode
-appends three DC spherical-harmonic coefficients to each Gaussian's ODE state
-(10 geometry values + 3 color values). Gaussian IDs stay persistent, opacity
-stays fixed, and the color derivative starts at zero. It does not introduce
+appends all `3 * (degree + 1)^2` spherical-harmonic coefficients to each Gaussian's
+ODE state: 13 total values for SH0, or 58 for SH3. Higher orders model
+view-dependent appearance as well as its change over time, and increase solver
+state/cache memory. Gaussian IDs stay persistent, opacity stays fixed, and every
+color derivative starts at zero. It does not introduce
 Gaussian birth/death or time-dependent visibility masks.
 
 Boundary caches and dynamic checkpoints are mode-specific: regenerate the
-boundary trajectory when switching color flow on or off, and use matching flags
-for global training and inference. Higher SH degrees and appearance optimization
-are not supported in color-flow mode. Omitting `--learn-shs` keeps the original
-geometry-only model and checkpoint format.
+boundary trajectory when switching color flow on or off **or changing SH degree**,
+and use matching flags for global training and inference. Appearance optimization
+is not supported in color-flow mode. Omitting `--learn-shs` keeps the original
+geometry-only model and checkpoint format; existing SH0 color-flow checkpoints
+remain compatible with `--learn-shs --sh-degree 0`.
 
 ### Inspect camera poses
 

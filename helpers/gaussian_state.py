@@ -1,11 +1,20 @@
 """Shared layout for persistent Gaussian ODE states.
 
-Geometry uses [means(3), quaternions(4), log-scales(3)]. Optional SH-degree-0
-color flow appends the three DC SH coefficients, not clipped RGB values.
+Geometry uses [means(3), quaternions(4), log-scales(3)]. Optional color flow
+appends all SH coefficients (DC first, then higher orders), not clipped RGB.
 Opacity and Gaussian identity are not part of the evolving state.
 """
 
 import torch
+
+
+def validate_color_dim(color_dim):
+    """Allow complete RGB SH bases through the rasterizer's maximum degree 4."""
+    if color_dim not in (0, 3, 12, 27, 48, 75):
+        raise ValueError(
+            "Color flow requires 3 * (sh_degree + 1)^2 coefficients "
+            "for SH degrees 0 through 4, or color_dim=0 for fixed color"
+        )
 
 
 def pack_gaussian_state(splats, deformed_params_list):
@@ -15,9 +24,14 @@ def pack_gaussian_state(splats, deformed_params_list):
         if name in ("means", "quats", "scales"):
             parts.append(splats[name])
         elif name == "shs":
-            if splats["sh0"].shape[1:] != (1, 3) or splats["shN"].numel() != 0:
-                raise ValueError("Color flow currently requires --sh-degree 0")
-            parts.append(splats["sh0"].flatten(start_dim=1))
+            sh0, shN = splats["sh0"], splats["shN"]
+            if (sh0.ndim != 3 or sh0.shape[1:] != (1, 3)
+                    or shN.ndim != 3 or shN.shape[0] != sh0.shape[0]
+                    or shN.shape[-1] != 3):
+                raise ValueError("Expected SH tensors shaped [N, 1, 3] and [N, K-1, 3]")
+            colors = torch.cat((sh0, shN), dim=1).flatten(start_dim=1)
+            validate_color_dim(colors.shape[-1])
+            parts.append(colors)
         else:
             raise ValueError(f"Unsupported evolving Gaussian parameter: {name}")
     return torch.cat(parts, dim=-1)
@@ -25,8 +39,7 @@ def pack_gaussian_state(splats, deformed_params_list):
 
 def validate_gaussian_state(state, color_dim=0):
     """Catch incompatible geometry-only/color checkpoints and trajectories."""
-    if color_dim not in (0, 3):
-        raise ValueError("Color flow supports three SH-degree-0 coefficients")
+    validate_color_dim(color_dim)
     expected = 10 + color_dim
     if state.ndim < 2 or state.shape[-1] != expected:
         raise ValueError(
@@ -45,7 +58,7 @@ def unpack_gaussian_state(state, color_dim=0):
         "scales": state[..., 7:10],
     }
     if color_dim:
-        params["colors"] = state[..., 10:13].unsqueeze(-2)  # [..., N, 1, 3]
+        params["colors"] = state[..., 10:].unflatten(-1, (color_dim // 3, 3))
     return params
 
 
